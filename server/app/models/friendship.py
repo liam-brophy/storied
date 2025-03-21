@@ -1,3 +1,4 @@
+from app import db
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import validates
@@ -5,6 +6,8 @@ import re
 
 class Friendship(db.Model):
     __tablename__ = 'friendships'
+
+    __table_args__ = {'extend_existing': True}
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)

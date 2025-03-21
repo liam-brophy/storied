@@ -1,11 +1,11 @@
+from app.models import Book
 from flask import Blueprint, request, jsonify, g, current_app
 from werkzeug.utils import secure_filename
 import os
 import boto3
 from botocore.exceptions import ClientError
 import uuid
-from models import db, Book, FileMetadata, User
-from auth import auth_required
+from .auth import auth_required
 
 book_bp = Blueprint('book', __name__, url_prefix='/api/books')
 
@@ -24,7 +24,6 @@ def get_books():
     try:
         user_id = g.user.id
         
-        # Query for public books and user's own books
         books = Book.query.filter(
             (Book.is_public == True) | (Book.uploaded_by_id == user_id)
         ).all()

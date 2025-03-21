@@ -8,34 +8,41 @@ from flask_jwt_extended import create_access_token, create_refresh_token
 
 oauth_bp = Blueprint('oauth', __name__)
 
-# Configure supported OAuth providers
-OAUTH_PROVIDERS = {
-    'google': {
-        'auth_url': 'https://accounts.google.com/o/oauth2/auth',
-        'token_url': 'https://oauth2.googleapis.com/token',
-        'user_info_url': 'https://www.googleapis.com/oauth2/v1/userinfo',
-        'scope': 'openid email profile',
-        'client_id': current_app.config.get('GOOGLE_CLIENT_ID'),
-        'client_secret': current_app.config.get('GOOGLE_CLIENT_SECRET'),
-    },
-    # Add other providers as needed (GitHub, Facebook, etc.)
-}
+def get_oauth_providers():
+    """Dynamically fetch OAuth provider configuration."""
+    return {
+        'google': {
+            'auth_url': 'https://accounts.google.com/o/oauth2/auth',
+            'token_url': 'https://oauth2.googleapis.com/token',
+            'user_info_url': 'https://www.googleapis.com/oauth2/v1/userinfo',
+            'scope': 'openid email profile',
+            'client_id': current_app.config.get('GOOGLE_CLIENT_ID'),
+            'client_secret': current_app.config.get('GOOGLE_CLIENT_SECRET'),
+        },
+        # Add other providers as needed (GitHub, Facebook, etc.)
+    }
 
 @oauth_bp.route('/api/oauth/<provider>/login')
 def oauth_login(provider):
-    """Initiate OAuth flow for the specified provider"""
+    """Initiate OAuth flow for the specified provider."""
     try:
-        if provider not in OAUTH_PROVIDERS:
+        oauth_providers = get_oauth_providers()
+        if provider not in oauth_providers:
             return jsonify({"error": f"OAuth provider '{provider}' not supported"}), 400
         
         # Generate state parameter to prevent CSRF attacks
         state = str(uuid.uuid4())
         session['oauth_state'] = state
         
-        provider_config = OAUTH_PROVIDERS[provider]
+        provider_config = oauth_providers[provider]
         
         # Create OAuth authorization URL
-        auth_url = f"{provider_config['auth_url']}?response_type=code&client_id={provider_config['client_id']}&redirect_uri={url_for('oauth.oauth_callback', provider=provider, _external=True)}&scope={provider_config['scope']}&state={state}"
+        auth_url = (
+            f"{provider_config['auth_url']}?response_type=code"
+            f"&client_id={provider_config['client_id']}"
+            f"&redirect_uri={url_for('oauth.oauth_callback', provider=provider, _external=True)}"
+            f"&scope={provider_config['scope']}&state={state}"
+        )
         
         return jsonify({"auth_url": auth_url})
     except Exception as e:
@@ -43,9 +50,10 @@ def oauth_login(provider):
 
 @oauth_bp.route('/api/oauth/<provider>/callback')
 def oauth_callback(provider):
-    """Handle OAuth callback from provider"""
+    """Handle OAuth callback from provider."""
     try:
-        if provider not in OAUTH_PROVIDERS:
+        oauth_providers = get_oauth_providers()
+        if provider not in oauth_providers:
             return jsonify({"error": f"OAuth provider '{provider}' not supported"}), 400
         
         # Verify state parameter to prevent CSRF attacks
@@ -61,7 +69,7 @@ def oauth_callback(provider):
             return jsonify({"error": "No authorization code received"}), 400
         
         # Exchange code for access token
-        provider_config = OAUTH_PROVIDERS[provider]
+        provider_config = oauth_providers[provider]
         token_response = requests.post(
             provider_config['token_url'],
             data={

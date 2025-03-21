@@ -1,7 +1,6 @@
-# Import individual models to make them accessible when importing the models package
-from .user import User
+from app import db
 from .book import Book
-from .author import Author
+from .file_metadata import FileMetadata
+from .user import User
 
-# Optionally, define __all__ to control what gets imported with `from models import *`
-__all__ = ["User", "Book", "Author"]
+__all__ = ["db", "Book", "FileMetadata", "User"]

@@ -1,3 +1,4 @@
+from app import db
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import validates
@@ -7,6 +8,8 @@ import re
 class Note(db.Model):
     __tablename__ = 'notes'
     
+    __table_args__ = {'extend_existing': True}
+
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
     page_number = db.Column(db.Integer, nullable=False)
