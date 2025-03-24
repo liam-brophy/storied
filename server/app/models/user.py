@@ -12,17 +12,17 @@ class User(db.Model):
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(50), nullable=False, unique=True)
-    email = db.Column(db.String(100), nullable=False, unique=True)
+    username = db.Column(db.String(80), nullable=False, unique=True)
+    email = db.Column(db.String(120), nullable=False, unique=True)
     password_hash = db.Column(db.String(128), nullable=False)
     oauth_provider = db.Column(db.String(50), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
     # Relationships
-    books = db.relationship('Book', backref='uploader', lazy=True, foreign_keys='Book.uploaded_by_id')
+    books = db.relationship('Book', back_populates='uploader', lazy=True, foreign_keys='books.uploaded_by_id')
     notes = db.relationship('Note', backref='user', lazy=True)
-    sent_friendships = db.relationship('Friendship', backref='user', lazy=True, foreign_keys='Friendship.user_id')
-    received_friendships = db.relationship('Friendship', backref='friend', lazy=True, foreign_keys='Friendship.friend_id')
+    sent_friendships = db.relationship('Friendship', backref='user', lazy=True, foreign_keys='friendships.user_id')
+    received_friendships = db.relationship('Friendship', backref='friend', lazy=True, foreign_keys='friendships.friend_id')
     
     @validates('username')
     def validate_username(self, key, username):

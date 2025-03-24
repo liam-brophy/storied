@@ -15,12 +15,15 @@ class Book(db.Model):
     author = db.Column(db.String(100), nullable=False)
     genre = db.Column(db.String(50), default='Unknown')
     is_public = db.Column(db.Boolean, default=True, nullable=False)
-    content = db.Column(db.Text, nullable=True)  #WILL USE BOTO3
+    s3_url = db.Column(db.String(255), nullable=False)  # Store S3 URL
+    file_size = db.Column(db.Integer, nullable=False)  # Optional: Store file size
+    file_type = db.Column(db.String(50), nullable=False)  # Optional: Store file type
     uploaded_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
     # Relationships
     notes = db.relationship('Note', backref='book', lazy=True, cascade='all, delete-orphan')
+    uploader = db.relationship('User', back_populates='books', lazy=True)
     file_metadata = db.relationship('FileMetadata', backref='book', lazy=True, uselist=False, cascade='all, delete-orphan')
     
     @validates('title')

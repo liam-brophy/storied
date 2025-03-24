@@ -1,18 +1,20 @@
 import os
-import secrets
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class Config:
     # Generate a random secret key for development or use environment variable
-    SECRET_KEY = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
+    SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "default_secret_key")
     
-    # JWT settings
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or secrets.token_hex(32)
-    JWT_ACCESS_TOKEN_EXPIRES = 3600  # 1 hour
-    JWT_REFRESH_TOKEN_EXPIRES = 2592000  # 30 days
+    # # JWT settings
+    # JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "default_jwt_secret_key")
+    # JWT_ACCESS_TOKEN_EXPIRES = 3600  # 1 hour
+    # JWT_REFRESH_TOKEN_EXPIRES = 2592000  # 30 days
     
     # Database settings
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URI') or 'sqlite:///app.db'
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URI", "sqlite:///e_reader.db")
     
     # File upload settings
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or os.path.join(os.path.abspath(os.path.dirname(__file__)), '../uploads')
@@ -23,4 +25,10 @@ class Config:
     GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
     
     # Frontend URL for redirects
-    FRONTEND_URL = os.environ.get('FRONTEND_URL') or 'http://localhost:3000'
+    FRONTEND_URL = os.environ.get('FRONTEND_URL') or 'http://localhost:5173'
+    
+    # AWS settings
+    AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+    AWS_REGION = os.getenv("AWS_REGION")
+    S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")

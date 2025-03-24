@@ -1,110 +1,136 @@
-from app.models import Book
 from flask import Blueprint, request, jsonify, g, current_app
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 import os
 import boto3
 from botocore.exceptions import ClientError
 import uuid
-from .auth import auth_required
 
-book_bp = Blueprint('book', __name__, url_prefix='/api/books')
+from app.models.book import Book, FileMetadata
+from app.models.user import User
+from app.routes.auth import auth_required
+from app import db
 
+# S3 Configuration
 s3_client = boto3.client(
     's3',
-    aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
-    aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
-    region_name=os.environ.get('AWS_REGION')
+    aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+    aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+    region_name=os.getenv('AWS_REGION', 'us-east-1')
 )
-S3_BUCKET = os.environ.get('S3_BUCKET_NAME')
+S3_BUCKET = os.getenv('S3_BUCKET_NAME')
 
-@book_bp.route('', methods=['GET'])
+books_bp = Blueprint('books', __name__, url_prefix='/api/books')
+
+def validate_book_access(book, user_id):
+    """
+    Check if user has access to the book
+    
+    :param book: Book object
+    :param user_id: ID of the current user
+    :return: Boolean indicating access
+    """
+    return book.is_public or book.uploaded_by_id == user_id
+
+def generate_s3_file_key(book_id, filename):
+    """
+    Generate a unique S3 file key
+    
+    :param book_id: ID of the book
+    :param filename: Original filename
+    :return: Unique S3 file key
+    """
+    safe_filename = secure_filename(filename)
+    unique_id = uuid.uuid4().hex
+    file_ext = os.path.splitext(safe_filename)[1]
+    return f"books/{book_id}/{unique_id}{file_ext}"
+
+@books_bp.route('', methods=['GET'])
 @auth_required
 def get_books():
-    """Get all books that the user has access to (public books and own books)"""
+    """Get all books that the user has access to"""
     try:
         user_id = g.user.id
         
+        # Get books that are either public or uploaded by the user
         books = Book.query.filter(
             (Book.is_public == True) | (Book.uploaded_by_id == user_id)
         ).all()
         
-        result = []
-        for book in books:
-            result.append({
-                'id': book.id,
-                'title': book.title,
-                'author': book.author,
-                'genre': book.genre,
-                'is_public': book.is_public,
-                'uploaded_by': book.uploader.username,
-                'created_at': book.created_at.isoformat()
-            })
+        # Serialize book data
+        result = [{
+            'id': book.id,
+            'title': book.title,
+            'author': book.author,
+            'genre': book.genre,
+            'is_public': book.is_public,
+            'uploaded_by': book.uploader.username,
+            'created_at': book.created_at.isoformat(),
+            'has_file': bool(book.file_metadata)
+        } for book in books]
         
         return jsonify(result), 200
+    
     except Exception as e:
         current_app.logger.error(f"Error fetching books: {str(e)}")
         return jsonify({'error': 'Failed to fetch books'}), 500
 
-@book_bp.route('/<int:book_id>', methods=['GET'])
+@books_bp.route('/<int:book_id>', methods=['GET'])
 @auth_required
 def get_book(book_id):
-    """Get a book by ID if the user has access to it"""
+    """Get a specific book with access control"""
     try:
-        user_id = g.user.id
         book = Book.query.get_or_404(book_id)
         
-        # Check if user has access to the book
-        if not book.is_public and book.uploaded_by_id != user_id:
+        # Validate user access
+        if not validate_book_access(book, g.user.id):
             return jsonify({'error': 'You do not have access to this book'}), 403
         
-        # Get file metadata if available
-        file_data = None
+        # Prepare book data
+        book_data = {
+            'id': book.id,
+            'title': book.title,
+            'author': book.author,
+            'genre': book.genre,
+            'is_public': book.is_public,
+            'uploaded_by': book.uploader.username,
+            'created_at': book.created_at.isoformat(),
+            'file_metadata': None
+        }
+        
+        # Add file metadata if available
         if book.file_metadata:
-            file_data = {
+            book_data['file_metadata'] = {
                 'file_name': book.file_metadata.file_name,
                 'file_type': book.file_metadata.file_type,
                 'size': book.file_metadata.size,
                 'uploaded_at': book.file_metadata.uploaded_at.isoformat()
             }
         
-        result = {
-            'id': book.id,
-            'title': book.title,
-            'author': book.author,
-            'genre': book.genre,
-            'is_public': book.is_public,
-            'content': book.content,  # Added content field
-            'uploaded_by': book.uploader.username,
-            'created_at': book.created_at.isoformat(),
-            'file': file_data
-        }
-        
-        return jsonify(result), 200
+        return jsonify(book_data), 200
+    
     except Exception as e:
         current_app.logger.error(f"Error fetching book: {str(e)}")
         return jsonify({'error': 'Failed to fetch book'}), 500
 
-@book_bp.route('', methods=['POST'])
+@books_bp.route('', methods=['POST'])
 @auth_required
 def create_book():
-    """Create a new book"""
+    """Create a new book entry"""
     try:
-        user_id = g.user.id
         data = request.json
         
-        required_fields = ['title', 'author']
-        for field in required_fields:
-            if field not in data:
-                return jsonify({'error': f'Missing required field: {field}'}), 400
+        # Validate required fields
+        if not all(field in data for field in ['title', 'author']):
+            return jsonify({'error': 'Missing required fields'}), 400
         
-        # Create new book object
+        # Create new book
         new_book = Book(
             title=data['title'],
             author=data['author'],
             genre=data.get('genre', 'Unknown'),
             is_public=data.get('is_public', True),
-            content=data.get('content', ''),  # Added content field
-            uploaded_by_id=user_id
+            uploaded_by_id=g.user.id
         )
         
         db.session.add(new_book)
@@ -116,209 +142,115 @@ def create_book():
             'author': new_book.author,
             'genre': new_book.genre,
             'is_public': new_book.is_public,
-            'content': new_book.content,  # Include content in response
             'uploaded_by': g.user.username,
             'created_at': new_book.created_at.isoformat()
         }), 201
-    except ValueError as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 400
+    
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error creating book: {str(e)}")
         return jsonify({'error': 'Failed to create book'}), 500
 
-@book_bp.route('/<int:book_id>', methods=['PUT'])
+@books_bp.route('/<int:book_id>/upload', methods=['POST'])
 @auth_required
-def update_book(book_id):
-    """Update an existing book if the user is the owner"""
+def upload_book_file(book_id):
+    """Upload a file for a specific book"""
     try:
-        user_id = g.user.id
         book = Book.query.get_or_404(book_id)
         
-        # Check if user is the owner
-        if book.uploaded_by_id != user_id:
-            return jsonify({'error': 'You do not have permission to update this book'}), 403
+        # Verify user ownership
+        if book.uploaded_by_id != g.user.id:
+            return jsonify({'error': 'Unauthorized to upload for this book'}), 403
         
-        data = request.json
+        # Validate file upload
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
         
-        # Update fields
-        if 'title' in data:
-            book.title = data['title']
-        if 'author' in data:
-            book.author = data['author']
-        if 'genre' in data:
-            book.genre = data['genre']
-        if 'is_public' in data:
-            book.is_public = data['is_public']
-        if 'content' in data:
-            book.content = data['content']  # Update content field
+        file = request.files['file']
         
-        db.session.commit()
+        # Validate file name and type
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
         
-        return jsonify({
-            'id': book.id,
-            'title': book.title,
-            'author': book.author,
-            'genre': book.genre,
-            'is_public': book.is_public,
-            'content': book.content,  # Include content in response
-            'uploaded_by': book.uploader.username,
-            'created_at': book.created_at.isoformat()
-        }), 200
-    except ValueError as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error updating book: {str(e)}")
-        return jsonify({'error': 'Failed to update book'}), 500
-
-@book_bp.route('/<int:book_id>', methods=['DELETE'])
-@auth_required
-def delete_book(book_id):
-    """Delete a book if the user is the owner"""
-    user_id = g.user.id
-    book = Book.query.get_or_404(book_id)
-    
-    # Check if user is the owner
-    if book.uploaded_by_id != user_id:
-        return jsonify({'error': 'You do not have permission to delete this book'}), 403
-    
-    try:
-        # If there's a file associated with this book, delete it from S3 too
-        if book.file_metadata:
-            try:
-                file_key = f"books/{book.id}/{book.file_metadata.file_name}"
-                s3_client.delete_object(Bucket=S3_BUCKET, Key=file_key)
-            except ClientError as e:
-                current_app.logger.error(f"Error deleting file from S3: {str(e)}")
-                # Continue with deletion even if S3 delete fails
+        # Validate file extension
+        valid_extensions = {'txt', 'pdf', 'epub', 'mobi', 'docx'}
+        file_ext = file.filename.rsplit('.', 1)[1].lower()
+        if file_ext not in valid_extensions:
+            return jsonify({'error': f'Invalid file type. Allowed: {", ".join(valid_extensions)}'}), 400
         
-        db.session.delete(book)
-        db.session.commit()
+        # Generate unique S3 key
+        s3_key = generate_s3_file_key(book_id, file.filename)
         
-        return jsonify({'message': 'Book deleted successfully'}), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error deleting book: {str(e)}")
-        return jsonify({'error': 'Failed to delete book'}), 500
-
-@book_bp.route('/<int:book_id>/upload', methods=['POST'])
-@auth_required
-def upload_file(book_id):
-    """Upload a file for a book"""
-    user_id = g.user.id
-    book = Book.query.get_or_404(book_id)
-    
-    # Check if user is the owner
-    if book.uploaded_by_id != user_id:
-        return jsonify({'error': 'You do not have permission to upload files for this book'}), 403
-    
-    # Check if file is included in request
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file provided'}), 400
-    
-    file = request.files['file']
-    
-    # Check if filename is valid
-    if file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
-    
-    # Validate file type
-    file_extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
-    valid_extensions = {'txt': 'txt', 'html': 'html', 'docx': 'docx', 'pdf': 'pdf'}
-    
-    if file_extension not in valid_extensions:
-        return jsonify({'error': 'Invalid file type. Allowed types: txt, html, docx, pdf'}), 400
-    
-    # Generate secure filename
-    secure_name = secure_filename(file.filename)
-    file_key = f"books/{book.id}/{secure_name}"
-    
-    try:
         # Upload to S3
         s3_client.upload_fileobj(
-            file,
-            S3_BUCKET,
-            file_key,
+            file, 
+            S3_BUCKET, 
+            s3_key,
             ExtraArgs={
-                'ContentType': file.content_type
+                'ContentType': file.content_type,
+                'ACL': 'private'
             }
         )
         
         # Create or update file metadata
-        if book.file_metadata:
-            # Update existing metadata
-            book.file_metadata.file_name = secure_name
-            book.file_metadata.file_type = valid_extensions[file_extension]
-            book.file_metadata.size = file.content_length or 0
-        else:
-            # Create new metadata
-            file_metadata = FileMetadata(
-                file_name=secure_name,
-                file_type=valid_extensions[file_extension],
-                size=file.content_length or 0,
-                book_id=book.id
-            )
-            db.session.add(file_metadata)
+        file_metadata = book.file_metadata or FileMetadata(book_id=book.id)
+        file_metadata.file_name = secure_filename(file.filename)
+        file_metadata.file_type = file_ext
+        file_metadata.size = file.content_length or 0
         
+        db.session.add(file_metadata)
         db.session.commit()
         
         return jsonify({
             'message': 'File uploaded successfully',
-            'file_name': secure_name,
-            'file_type': valid_extensions[file_extension],
-            'size': file.content_length or 0
+            'file_name': file_metadata.file_name,
+            'file_type': file_metadata.file_type,
+            'size': file_metadata.size
         }), 201
-        
-    except ClientError as e:
+    
+    except ClientError as s3_error:
         db.session.rollback()
-        current_app.logger.error(f"S3 upload error: {str(e)}")
+        current_app.logger.error(f"S3 Upload Error: {str(s3_error)}")
         return jsonify({'error': 'Failed to upload file to storage'}), 500
-    except ValueError as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 400
+    
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error uploading file: {str(e)}")
+        current_app.logger.error(f"File upload error: {str(e)}")
         return jsonify({'error': 'Failed to process file upload'}), 500
 
-@book_bp.route('/<int:book_id>/download', methods=['GET'])
+@books_bp.route('/<int:book_id>/download', methods=['GET'])
 @auth_required
-def download_file(book_id):
-    """Generate a download URL for a book's file"""
-    user_id = g.user.id
-    book = Book.query.get_or_404(book_id)
-    
-    # Check if user has access to the book
-    if not book.is_public and book.uploaded_by_id != user_id:
-        return jsonify({'error': 'You do not have access to this book'}), 403
-    
-    # Check if book has a file
-    if not book.file_metadata:
-        return jsonify({'error': 'No file available for this book'}), 404
-    
+def generate_download_url(book_id):
+    """Generate a temporary download URL for a book file"""
     try:
-        # Generate presigned URL for download
-        file_key = f"books/{book.id}/{book.file_metadata.file_name}"
-        url = s3_client.generate_presigned_url(
+        book = Book.query.get_or_404(book_id)
+        
+        # Validate access
+        if not validate_book_access(book, g.user.id):
+            return jsonify({'error': 'Unauthorized to download this book'}), 403
+        
+        # Check if file exists
+        if not book.file_metadata:
+            return jsonify({'error': 'No file available for download'}), 404
+        
+        # Generate presigned URL
+        s3_key = f"books/{book_id}/{book.file_metadata.file_name}"
+        download_url = s3_client.generate_presigned_url(
             'get_object',
             Params={
                 'Bucket': S3_BUCKET,
-                'Key': file_key
+                'Key': s3_key,
+                'ResponseContentDisposition': f'attachment; filename="{book.file_metadata.file_name}"'
             },
-            ExpiresIn=3600  # URL valid for 1 hour
+            ExpiresIn=3600  # 1 hour
         )
         
         return jsonify({
-            'download_url': url,
+            'download_url': download_url,
             'file_name': book.file_metadata.file_name,
-            'file_type': book.file_metadata.file_type,
             'expires_in': '1 hour'
         }), 200
-        
-    except ClientError as e:
-        current_app.logger.error(f"Error generating download URL: {str(e)}")
+    
+    except ClientError as s3_error:
+        current_app.logger.error(f"Download URL generation error: {str(s3_error)}")
         return jsonify({'error': 'Failed to generate download link'}), 500

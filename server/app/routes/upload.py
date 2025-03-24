@@ -1,3 +1,4 @@
+import boto3
 from flask import Blueprint, request, jsonify, current_app
 import os
 from werkzeug.utils import secure_filename
@@ -6,6 +7,7 @@ from app.models.book import Book
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 import uuid
+import mimetypes
 
 upload_bp = Blueprint('upload', __name__)
 
@@ -13,6 +15,47 @@ ALLOWED_EXTENSIONS = {'pdf', 'epub', 'mobi', 'txt', 'doc', 'docx', 'html'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def upload_to_s3(file, unique_filename):
+    """
+    Upload file to S3 bucket
+    
+    Args:
+        file: File object to upload
+        unique_filename: Unique filename for S3 storage
+    
+    Returns:
+        str: S3 URL of the uploaded file
+    """
+    try:
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=current_app.config['AWS_ACCESS_KEY_ID'],
+            aws_secret_access_key=current_app.config['AWS_SECRET_ACCESS_KEY'],
+            region_name=current_app.config['AWS_REGION']
+        )
+        
+        # Determine content type
+        content_type = file.content_type or mimetypes.guess_type(file.filename)[0] or 'application/octet-stream'
+        
+        # Upload to S3
+        s3_client.upload_fileobj(
+            file,
+            current_app.config['S3_BUCKET_NAME'],
+            unique_filename,
+            ExtraArgs={
+                'ContentType': content_type
+            }
+        )
+        
+        # Generate S3 URL
+        s3_url = f"https://{current_app.config['S3_BUCKET_NAME']}.s3.amazonaws.com/{unique_filename}"
+        
+        return s3_url
+    
+    except Exception as e:
+        current_app.logger.error(f"S3 Upload Error: {str(e)}")
+        raise
 
 @upload_bp.route('/api/upload', methods=['POST'])
 @jwt_required()
@@ -33,24 +76,24 @@ def upload_file():
             filename = secure_filename(file.filename)
             
             # Generate a unique filename using UUID
-            unique_filename = f"{uuid.uuid4()}_{filename}"
+            unique_filename = f"books/{uuid.uuid4()}_{filename}"
             
-            # Create directory if it doesn't exist
-            upload_folder = current_app.config['UPLOAD_FOLDER']
-            os.makedirs(upload_folder, exist_ok=True)
-            
-            # Save the file
-            file_path = os.path.join(upload_folder, unique_filename)
-            file.save(file_path)
+            # Upload to S3
+            s3_url = upload_to_s3(file, unique_filename)
             
             # Get the current user's ID
             current_user_id = get_jwt_identity()
             
-            # Create file metadata
-            file_type = file.content_type if hasattr(file, 'content_type') else "application/octet-stream"
-            file_size = os.path.getsize(file_path)
+            # Get file details
+            file_type = file.content_type or mimetypes.guess_type(filename)[0] or "application/octet-stream"
             
-            # Create the file metadata record
+            # Determine file size 
+            # Note: For S3 uploads, you might need to reset file pointer or use different method
+            file.seek(0, os.SEEK_END)
+            file_size = file.tell()
+            file.seek(0)  # Reset file pointer
+            
+            # Create file metadata
             new_file_metadata = FileMetadata(
                 file_name=filename,
                 file_type=file_type,
@@ -66,6 +109,7 @@ def upload_file():
             title = request.form.get('title', filename)  # Use filename as title if not provided
             author = request.form.get('author', 'Unknown')
             genre = request.form.get('genre', None)
+            is_public = request.form.get('is_public', 'false').lower() == 'true'
             
             new_book = Book(
                 title=title,
@@ -73,7 +117,10 @@ def upload_file():
                 genre=genre,
                 uploaded_by_id=current_user_id,
                 file_id=new_file_metadata.id,
-                is_public=request.form.get('is_public', False)
+                is_public=is_public,
+                s3_url=s3_url,  # Store S3 URL in the book model
+                file_size=file_size,
+                file_type=file_type
             )
             
             new_book.save()
@@ -82,11 +129,14 @@ def upload_file():
                 "message": "File uploaded successfully",
                 "book_id": new_book.id,
                 "file_metadata_id": new_file_metadata.id,
-                "filename": filename
+                "filename": filename,
+                "s3_url": s3_url
             }), 201
         
         return jsonify({"error": f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"}), 400
+    
     except Exception as e:
+        current_app.logger.error(f"Upload Error: {str(e)}")
         return jsonify({"error": f"An error occurred during file upload: {str(e)}"}), 500
 
 @upload_bp.route('/api/books/<int:book_id>/download', methods=['GET'])
@@ -103,25 +153,44 @@ def download_file(book_id):
             return jsonify({"error": "Book not found"}), 404
         
         # Check if user has access to this book
-        if not book.is_public and book.uploaded_by_id != current_user_id:
-            # TODO: Add friendship check here when friendship model is implemented
-            return jsonify({"error": "You don't have permission to download this file"}), 403
+        if not book.is_public:
+            # Check if user is the owner
+            if book.uploaded_by_id != current_user_id:
+                # Check if users are friends
+                if not Friendship.are_friends(current_user_id, book.uploaded_by_id):
+                    return jsonify({"error": "You don't have permission to download this file"}), 403
         
-        # Get file metadata
-        file_metadata = FileMetadata.query.get(book.file_id)
+        # Verify S3 URL exists
+        if not book.s3_url:
+            return jsonify({"error": "No S3 URL associated with this book"}), 404
         
-        if not file_metadata:
-            return jsonify({"error": "File metadata not found"}), 404
+        # Generate pre-signed URL for download
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=current_app.config['AWS_ACCESS_KEY_ID'],
+            aws_secret_access_key=current_app.config['AWS_SECRET_ACCESS_KEY'],
+            region_name=current_app.config['AWS_REGION']
+        )
         
-        # Construct the file path
-        filename = f"{file_metadata.id}_{file_metadata.file_name}"
-        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+        # Extract the S3 object key from the full S3 URL
+        s3_bucket = current_app.config['S3_BUCKET_NAME']
+        s3_key = book.s3_url.split(f"{s3_bucket}.s3.amazonaws.com/", 1)[1]
         
-        # Check if file exists
-        if not os.path.exists(file_path):
-            return jsonify({"error": "File not found on server"}), 404
+        # Generate pre-signed URL
+        presigned_url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': s3_bucket,
+                'Key': s3_key
+            },
+            ExpiresIn=3600  # URL expires in 1 hour
+        )
         
-        # Return the file
-        return send_file(file_path, as_attachment=True, download_name=file_metadata.file_name)
+        return jsonify({
+            "download_url": presigned_url,
+            "filename": book.title  # or use original filename if available
+        }), 200
+    
     except Exception as e:
+        current_app.logger.error(f"Download Error: {str(e)}")
         return jsonify({"error": f"An error occurred during file download: {str(e)}"}), 500

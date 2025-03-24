@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, g, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, Friendship
-from auth import auth_required, create_access_token
+from ..models import db, User, Friendship
+from .auth import auth_required, create_access_token
 
 user_bp = Blueprint('user', __name__, url_prefix='/api/users')
 

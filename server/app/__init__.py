@@ -1,9 +1,10 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_bcrypt import Bcrypt
+from flask_restful import Api
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager
-from .config import Config 
+from .config import Config
 import os
 from dotenv import load_dotenv
 
@@ -11,21 +12,22 @@ load_dotenv()
 
 db = SQLAlchemy()
 migrate = Migrate()
+bcrypt = Bcrypt()
+api = Api()
 
 def create_app():
     """Initialize and configure the Flask application"""
     app = Flask(__name__)
+    app.config.from_object(Config)  # Ensure your config is properly set up
 
-    CORS(app)
-
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///storied.db'
-    
+    # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
+    bcrypt.init_app(app)
+    api.init_app(app)
+    CORS(app)
 
-    jwt = JWTManager(app)
-
-    # Register blueprints using the function from routes
+    # Register routes
     from .routes import register_routes
     register_routes(app)
 

@@ -1,10 +1,10 @@
 from flask import Blueprint, request, jsonify, g, current_app
-from models import db, Note, Book
-from auth import auth_required
+from ..models import db, Note, Book
+from .auth import auth_required
 
-note_bp = Blueprint('note', __name__, url_prefix='/api/notes')
+notes_bp = Blueprint('note', __name__, url_prefix='/api/notes')
 
-@note_bp.route('/book/<int:book_id>', methods=['GET'])
+@notes_bp.route('/book/<int:book_id>', methods=['GET'])
 @auth_required
 def get_notes_by_book(book_id):
     """Get all notes for a specific book that the user has access to"""
@@ -37,7 +37,7 @@ def get_notes_by_book(book_id):
         current_app.logger.error(f"Error fetching notes: {str(e)}")
         return jsonify({'error': 'Failed to fetch notes'}), 500
 
-@note_bp.route('', methods=['POST'])
+@notes_bp.route('', methods=['POST'])
 @auth_required
 def create_note():
     """Create a new note"""
@@ -83,7 +83,7 @@ def create_note():
         current_app.logger.error(f"Error creating note: {str(e)}")
         return jsonify({'error': 'Failed to create note'}), 500
 
-@note_bp.route('/<int:note_id>', methods=['GET'])
+@notes_bp.route('/<int:note_id>', methods=['GET'])
 @auth_required
 def get_note(note_id):
     """Get a specific note"""
@@ -107,7 +107,7 @@ def get_note(note_id):
         current_app.logger.error(f"Error fetching note: {str(e)}")
         return jsonify({'error': 'Failed to fetch note'}), 500
 
-@note_bp.route('/<int:note_id>', methods=['PUT'])
+@notes_bp.route('/<int:note_id>', methods=['PUT'])
 @auth_required
 def update_note(note_id):
     """Update a specific note"""
@@ -145,7 +145,7 @@ def update_note(note_id):
         current_app.logger.error(f"Error updating note: {str(e)}")
         return jsonify({'error': 'Failed to update note'}), 500
 
-@note_bp.route('/<int:note_id>', methods=['DELETE'])
+@notes_bp.route('/<int:note_id>', methods=['DELETE'])
 @auth_required
 def delete_note(note_id):
     """Delete a specific note"""
