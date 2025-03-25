@@ -6,19 +6,25 @@ from flask_restful import Api
 from flask_cors import CORS
 from .config import Config
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 db = SQLAlchemy()
 migrate = Migrate()
 bcrypt = Bcrypt()
 api = Api()
 
-def create_app():
-    """Initialize and configure the Flask application"""
+def create_app(testing=False):
+    """Initialize and configure the Flask application."""
     app = Flask(__name__)
-    app.config.from_object(Config)  # Ensure your config is properly set up
+
+    # Load default config
+    app.config.from_object(Config)
+
+    # Override settings for testing
+    if testing:
+        app.config["TESTING"] = True
+        app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    else:
+        app.config["SQLALCHEMY_DATABASE_URI"] = Config.SQLALCHEMY_DATABASE_URI
 
     # Initialize extensions
     db.init_app(app)
@@ -27,8 +33,19 @@ def create_app():
     api.init_app(app)
     CORS(app)
 
-    # Register routes
-    from .routes import register_routes
-    register_routes(app)
 
     return app
+
+app = create_app()
+
+
+def configure_cors(app):
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": [
+                "http://localhost:5173",  # Vite default dev server
+                "http://127.0.0.1:5173",
+                # Add your production frontend URL when deployed
+            ]
+        }
+    })

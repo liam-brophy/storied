@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
 from sqlalchemy import or_, and_
-from app.models.user import User
-from app.models.friendship import Friendship
-from app.models.book import Book
+from server.app.models.user import User
+from server.app.models.friendship import Friendship
+from server.app.models.book import Book
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 

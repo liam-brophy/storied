@@ -6,8 +6,8 @@ api_bp = Blueprint('api', __name__)
 # Define the register_routes function without importing blueprints here
 def register_routes(app):
     # Import blueprints inside the function to avoid circular imports
-    from .auth import auth_bp  
-    from .oauth import oauth_bp
+    # from .auth import auth_bp  
+    # from .oauth import oauth_bp
     from .books import books_bp
     from .notes import notes_bp
     from .search import search_bp
@@ -15,9 +15,9 @@ def register_routes(app):
     from .user import user_bp
     from .friends import friends_bp
     
-    # Register blueprints with the main API blueprint
-    api_bp.register_blueprint(auth_bp)
-    api_bp.register_blueprint(oauth_bp)
+    # # Register blueprints with the main API blueprint
+    # api_bp.register_blueprint(auth_bp)
+    # api_bp.register_blueprint(oauth_bp)
     api_bp.register_blueprint(books_bp)
     api_bp.register_blueprint(notes_bp)
     api_bp.register_blueprint(search_bp)

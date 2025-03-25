@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import validates
 import re
 
-db = SQLAlchemy()
+# db = SQLAlchemy()
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -19,7 +19,7 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
     # Relationships
-    books = db.relationship('Book', back_populates='uploader', lazy=True, foreign_keys='books.uploaded_by_id')
+    books = db.relationship('Book', back_populates='uploader', lazy=True, cascade="all, delete-orphan", foreign_keys='books.uploaded_by_id')
     notes = db.relationship('Note', backref='user', lazy=True)
     sent_friendships = db.relationship('Friendship', backref='user', lazy=True, foreign_keys='friendships.user_id')
     received_friendships = db.relationship('Friendship', backref='friend', lazy=True, foreign_keys='friendships.friend_id')

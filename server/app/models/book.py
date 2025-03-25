@@ -1,24 +1,19 @@
 from app import db
 from datetime import datetime
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import validates
-import re
-
 
 class Book(db.Model):
     __tablename__ = 'books'
-
-    __table_args__ = {'extend_existing': True}
     
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
     author = db.Column(db.String(100), nullable=False)
     genre = db.Column(db.String(50), default='Unknown')
     is_public = db.Column(db.Boolean, default=True, nullable=False)
-    s3_url = db.Column(db.String(255), nullable=False)  # Store S3 URL
-    file_size = db.Column(db.Integer, nullable=False)  # Optional: Store file size
-    file_type = db.Column(db.String(50), nullable=False)  # Optional: Store file type
-    uploaded_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    s3_url = db.Column(db.String(255), nullable=False)
+    file_size = db.Column(db.Integer, nullable=False)
+    file_type = db.Column(db.String(50), nullable=False)
+    uploaded_by_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete="CASCADE"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
     # Relationships
@@ -45,6 +40,8 @@ class Book(db.Model):
     
     @validates('uploaded_by_id')
     def validate_uploader(self, key, user_id):
+        # Use deferred import to avoid circular dependency
+        from .user import User
         if User.query.get(user_id) is None:
             raise ValueError('Uploaded by user does not exist')
         return user_id

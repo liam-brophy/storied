@@ -1,7 +1,4 @@
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 class Config:
     # Generate a random secret key for development or use environment variable

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, g, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from ..models import db, User, Friendship
-from .auth import auth_required, create_access_token
+# from .auth import auth_required, create_access_token
 
 user_bp = Blueprint('user', __name__, url_prefix='/api/users')
 
@@ -41,7 +41,7 @@ def register():
         db.session.commit()
         
         # Create access token
-        access_token = create_access_token(new_user.id)
+        # access_token = create_access_token(new_user.id)
         
         return jsonify({
             'message': 'User registered successfully',
@@ -50,7 +50,7 @@ def register():
                 'username': new_user.username,
                 'email': new_user.email
             },
-            'access_token': access_token
+            # 'access_token': access_token
         }), 201
         
     except ValueError as e:
@@ -85,7 +85,7 @@ def login():
             return jsonify({'error': 'Invalid credentials'}), 401
         
         # Create access token
-        access_token = create_access_token(user.id)
+        # access_token = create_access_token(user.id)
         
         return jsonify({
             'message': 'Login successful',
@@ -94,14 +94,14 @@ def login():
                 'username': user.username,
                 'email': user.email
             },
-            'access_token': access_token
+            # 'access_token': access_token
         }), 200
     except Exception as e:
         current_app.logger.error(f"Error during login: {str(e)}")
         return jsonify({'error': 'Failed to log in'}), 500
 
 @user_bp.route('/profile', methods=['GET'])
-@auth_required
+
 def get_profile():
     """Get current user's profile"""
     user = g.user
@@ -115,7 +115,7 @@ def get_profile():
     }), 200
 
 @user_bp.route('/profile', methods=['PUT'])
-@auth_required
+
 def update_profile():
     """Update current user's profile"""
     try:
@@ -163,7 +163,7 @@ def update_profile():
         return jsonify({'error': 'Failed to update profile'}), 500
 
 @user_bp.route('/friends', methods=['GET'])
-@auth_required
+
 def get_friends():
     """Get current user's friends"""
     user_id = g.user.id
@@ -202,7 +202,7 @@ def get_friends():
     return jsonify(friends), 200
 
 @user_bp.route('/friends/requests', methods=['GET'])
-@auth_required
+
 def get_friend_requests():
     """Get pending friend requests"""
     user_id = g.user.id
@@ -247,7 +247,7 @@ def get_friend_requests():
     }), 200
 
 @user_bp.route('/friends/request', methods=['POST'])
-@auth_required
+
 def send_friend_request():
     """Send a friend request to another user"""
     user_id = g.user.id
@@ -311,7 +311,7 @@ def send_friend_request():
         return jsonify({'error': 'Failed to send friend request'}), 500
 
 @user_bp.route('/friends/request/<int:request_id>/respond', methods=['POST'])
-@auth_required
+
 def respond_to_friend_request(request_id):
     """Accept or reject a friend request"""
     user_id = g.user.id
@@ -354,7 +354,7 @@ def respond_to_friend_request(request_id):
         return jsonify({'error': 'Failed to process friend request'}), 500
 
 @user_bp.route('/friends/<int:friendship_id>', methods=['DELETE'])
-@auth_required
+
 def remove_friend(friendship_id):
     """Remove a friend (delete friendship)"""
     user_id = g.user.id
@@ -378,7 +378,7 @@ def remove_friend(friendship_id):
         return jsonify({'error': 'Failed to remove friendship'}), 500
 
 @user_bp.route('/search', methods=['GET'])
-@auth_required
+
 def search_users():
     """Search for users by username"""
     query = request.args.get('q', '')
