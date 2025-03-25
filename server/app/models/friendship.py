@@ -1,8 +1,9 @@
 from app import db
 from datetime import datetime
 from sqlalchemy import CheckConstraint, UniqueConstraint
+from sqlalchemy_serializer import SerializerMixin
 
-class Friendship(db.Model):
+class Friendship(db.Model, SerializerMixin):
     __tablename__ = 'friendships'
     
     __table_args__ = (
@@ -30,6 +31,8 @@ class Friendship(db.Model):
         onupdate=datetime.utcnow, 
         nullable=False
     )
+
+    serialize_rules = ('-user_id', '-friend_id')  # Define serialization rules
 
     def __repr__(self):
         return f'<Friendship {self.user_id} - {self.friend_id}: {self.status}>'

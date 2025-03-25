@@ -1,5 +1,5 @@
 import React, { useState, useContext } from "react";
-import StoryList from "./StoryList";
+import BookList from "./StoryList";
 import SearchBar from "./SearchBar";
 import { StoriesContext } from "../StoriesContext";
 

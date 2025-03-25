@@ -5,10 +5,10 @@ import os
 import boto3
 from botocore.exceptions import ClientError
 import uuid
+from ipdb import set_trace
 
-from app.models.book import Book
-from app.models.file_metadata import FileMetadata
-from app.models.user import User
+
+from app.models import Book, FileMetadata, User
 # from app.routes.auth import auth_required
 from app import db
 
@@ -22,6 +22,16 @@ s3_client = boto3.client(
 S3_BUCKET = os.getenv('S3_BUCKET_NAME')
 
 books_bp = Blueprint('books', __name__, url_prefix='/api/books')
+
+
+#STANDARADIZED RESPONSE
+# def api_response(success, message, data=None, status=200):
+#     """Standardized API response format"""
+#     return jsonify({
+#         'success': success,
+#         'message': message,
+#         'data': data
+#     }), status
 
 def validate_book_access(book, user_id):
     """
@@ -51,30 +61,21 @@ def generate_s3_file_key(book_id, filename):
 def get_books():
     """Get all books that the user has access to"""
     try:
-        user_id = g.user.id
-        
+        # user_id = g.user.id
+
         # Get books that are either public or uploaded by the user
         books = Book.query.filter(
-            (Book.is_public == True) | (Book.uploaded_by_id == user_id)
+            (Book.is_public == True) #| (Book.uploaded_by_id == user_id)
         ).all()
         
-        # Serialize book data
-        result = [{
-            'id': book.id,
-            'title': book.title,
-            'author': book.author,
-            'genre': book.genre,
-            'is_public': book.is_public,
-            'uploaded_by': book.uploader.username,
-            'created_at': book.created_at.isoformat(),
-            'has_file': bool(book.file_metadata)
-        } for book in books]
+        # Serialize book data using SerializerMixin
+        result = [book.to_dict() for book in books]
         
         return jsonify(result), 200
     
     except Exception as e:
-        current_app.logger.error(f"Error fetching books: {str(e)}")
-        return jsonify({'error': 'Failed to fetch books'}), 500
+        # current_app.logger.error(f"Error fetching books: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @books_bp.route('/<int:book_id>', methods=['GET'])
 # @auth_required
@@ -87,26 +88,8 @@ def get_book(book_id):
         if not validate_book_access(book, g.user.id):
             return jsonify({'error': 'You do not have access to this book'}), 403
         
-        # Prepare book data
-        book_data = {
-            'id': book.id,
-            'title': book.title,
-            'author': book.author,
-            'genre': book.genre,
-            'is_public': book.is_public,
-            'uploaded_by': book.uploader.username,
-            'created_at': book.created_at.isoformat(),
-            'file_metadata': None
-        }
-        
-        # Add file metadata if available
-        if book.file_metadata:
-            book_data['file_metadata'] = {
-                'file_name': book.file_metadata.file_name,
-                'file_type': book.file_metadata.file_type,
-                'size': book.file_metadata.size,
-                'uploaded_at': book.file_metadata.uploaded_at.isoformat()
-            }
+        # Serialize book data using SerializerMixin
+        book_data = book.to_dict()
         
         return jsonify(book_data), 200
     
@@ -137,15 +120,8 @@ def create_book():
         db.session.add(new_book)
         db.session.commit()
         
-        return jsonify({
-            'id': new_book.id,
-            'title': new_book.title,
-            'author': new_book.author,
-            'genre': new_book.genre,
-            'is_public': new_book.is_public,
-            'uploaded_by': g.user.username,
-            'created_at': new_book.created_at.isoformat()
-        }), 201
+        # Serialize book data using SerializerMixin
+        return jsonify(new_book.to_dict()), 201
     
     except Exception as e:
         db.session.rollback()
@@ -194,7 +170,11 @@ def upload_book_file(book_id):
         )
         
         # Create or update file metadata
-        file_metadata = book.file_metadata or FileMetadata(book_id=book.id)
+        if not book.file_metadata:
+            file_metadata = FileMetadata(book_id=book.id)
+            db.session.add(file_metadata)
+        else:
+            file_metadata = book.file_metadata
         file_metadata.file_name = secure_filename(file.filename)
         file_metadata.file_type = file_ext
         file_metadata.size = file.content_length or 0
@@ -235,7 +215,7 @@ def generate_download_url(book_id):
             return jsonify({'error': 'No file available for download'}), 404
         
         # Generate presigned URL
-        s3_key = f"books/{book_id}/{book.file_metadata.file_name}"
+        s3_key = f"books/{book_id}/{secure_filename(book.file_metadata.file_name)}"
         download_url = s3_client.generate_presigned_url(
             'get_object',
             Params={

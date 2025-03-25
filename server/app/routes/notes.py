@@ -1,11 +1,11 @@
 from flask import Blueprint, request, jsonify, g, current_app
-from ..models import db, Note, Book
+from app import db
+from app.models import Note, Book
 # from .auth import auth_required
 
 notes_bp = Blueprint('note', __name__, url_prefix='/api/notes')
 
 @notes_bp.route('/book/<int:book_id>', methods=['GET'])
-
 def get_notes_by_book(book_id):
     """Get all notes for a specific book that the user has access to"""
     try:
@@ -22,23 +22,12 @@ def get_notes_by_book(book_id):
             user_id=user_id
         ).order_by(Note.page_number).all()
         
-        result = []
-        for note in notes:
-            result.append({
-                'id': note.id,
-                'content': note.content,
-                'page_number': note.page_number,
-                'book_id': note.book_id,
-                'created_at': note.created_at.isoformat()
-            })
-        
-        return jsonify(result), 200
+        return jsonify([note.to_dict() for note in notes]), 200
     except Exception as e:
         current_app.logger.error(f"Error fetching notes: {str(e)}")
         return jsonify({'error': 'Failed to fetch notes'}), 500
 
 @notes_bp.route('', methods=['POST'])
-
 def create_note():
     """Create a new note"""
     try:
@@ -67,14 +56,7 @@ def create_note():
         db.session.add(new_note)
         db.session.commit()
         
-        return jsonify({
-            'id': new_note.id,
-            'content': new_note.content,
-            'page_number': new_note.page_number,
-            'book_id': new_note.book_id,
-            'user_id': new_note.user_id,
-            'created_at': new_note.created_at.isoformat()
-        }), 201
+        return jsonify(new_note.to_dict()), 201
     except ValueError as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
@@ -84,7 +66,6 @@ def create_note():
         return jsonify({'error': 'Failed to create note'}), 500
 
 @notes_bp.route('/<int:note_id>', methods=['GET'])
-
 def get_note(note_id):
     """Get a specific note"""
     try:
@@ -96,19 +77,12 @@ def get_note(note_id):
         if note.user_id != user_id:
             return jsonify({'error': 'You do not have access to this note'}), 403
         
-        return jsonify({
-            'id': note.id,
-            'content': note.content,
-            'page_number': note.page_number,
-            'book_id': note.book_id,
-            'created_at': note.created_at.isoformat()
-        }), 200
+        return jsonify(note.to_dict()), 200
     except Exception as e:
         current_app.logger.error(f"Error fetching note: {str(e)}")
         return jsonify({'error': 'Failed to fetch note'}), 500
 
 @notes_bp.route('/<int:note_id>', methods=['PUT'])
-
 def update_note(note_id):
     """Update a specific note"""
     try:
@@ -130,13 +104,7 @@ def update_note(note_id):
         
         db.session.commit()
         
-        return jsonify({
-            'id': note.id,
-            'content': note.content,
-            'page_number': note.page_number,
-            'book_id': note.book_id,
-            'created_at': note.created_at.isoformat()
-        }), 200
+        return jsonify(note.to_dict()), 200
     except ValueError as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
@@ -146,7 +114,6 @@ def update_note(note_id):
         return jsonify({'error': 'Failed to update note'}), 500
 
 @notes_bp.route('/<int:note_id>', methods=['DELETE'])
-
 def delete_note(note_id):
     """Delete a specific note"""
     try:

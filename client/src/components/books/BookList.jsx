@@ -1,22 +1,25 @@
-import React from "react";
-import StoryCard from "./StoryCard";
-import StoryUpload from "./StoryUpload"
-import '../index.css';
+import React, { useContext } from "react";
+import { BooksContext } from "../../contexts/BookContext";
+import "../../index.css";
 
-const StoryList = ({ stories, handleUpload}) => {
+const BookList = () => {
+  const { books } = useContext(BooksContext);
+
+  if (!books || books.length === 0) {
+    return <p>No books found</p>;
+  }
 
   return (
-<div className="storyList">
-      {stories.length === 0 ? (
-        <p>No stories found</p>
-      ) : (
-        stories.map((story) => (
-          <StoryCard key={story.id} story={story} />
-        ))
-      )}
-      {/* <StoryUpload onUpload={handleUpload} /> */}
+    <div className="bookList">
+      {books.map((book) => (
+        <div key={book.id} className="bookCard">
+          <h3>{book.title}</h3>
+          <p>{book.author}</p>
+          {/* You can add additional information or actions for each book */}
+        </div>
+      ))}
     </div>
   );
 };
 
-export default StoryList;
+export default BookList;

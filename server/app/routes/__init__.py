@@ -26,7 +26,7 @@ def register_routes(app):
     api_bp.register_blueprint(friends_bp)
     
     # Register the main API blueprint with the app
-    app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(api_bp)
     
     register_error_handlers(app)
     

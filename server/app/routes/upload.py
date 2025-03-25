@@ -2,8 +2,7 @@ import boto3
 from flask import Blueprint, request, jsonify, current_app
 import os
 from werkzeug.utils import secure_filename
-from server.app.models.file_metadata import FileMetadata
-from server.app.models.book import Book
+from app.models import FileMetadata, Book
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 import uuid

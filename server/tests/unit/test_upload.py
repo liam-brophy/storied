@@ -1,7 +1,7 @@
 import pytest
 from main import app
-from server.app import db
-from server.app.models import User
+from app import db
+from app.models import User
 import io
 import os
 

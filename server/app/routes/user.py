@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, g, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
-from ..models import db, User, Friendship
+from app import db
+from app.models import User, Friendship
 # from .auth import auth_required, create_access_token
 
 user_bp = Blueprint('user', __name__, url_prefix='/api/users')
@@ -40,17 +41,9 @@ def register():
         db.session.add(new_user)
         db.session.commit()
         
-        # Create access token
-        # access_token = create_access_token(new_user.id)
-        
         return jsonify({
             'message': 'User registered successfully',
-            'user': {
-                'id': new_user.id,
-                'username': new_user.username,
-                'email': new_user.email
-            },
-            # 'access_token': access_token
+            'user': new_user.to_dict()  # Use SerializerMixin
         }), 201
         
     except ValueError as e:
@@ -84,38 +77,22 @@ def login():
         if not user or not check_password_hash(user.password_hash, data['password']):
             return jsonify({'error': 'Invalid credentials'}), 401
         
-        # Create access token
-        # access_token = create_access_token(user.id)
-        
         return jsonify({
             'message': 'Login successful',
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email
-            },
-            # 'access_token': access_token
+            'user': user.to_dict()  # Use SerializerMixin
         }), 200
     except Exception as e:
         current_app.logger.error(f"Error during login: {str(e)}")
         return jsonify({'error': 'Failed to log in'}), 500
 
 @user_bp.route('/profile', methods=['GET'])
-
 def get_profile():
     """Get current user's profile"""
     user = g.user
     
-    return jsonify({
-        'id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'oauth_provider': user.oauth_provider,
-        'created_at': user.created_at.isoformat()
-    }), 200
+    return jsonify(user.to_dict()), 200  # Use SerializerMixin
 
 @user_bp.route('/profile', methods=['PUT'])
-
 def update_profile():
     """Update current user's profile"""
     try:
@@ -145,13 +122,7 @@ def update_profile():
         
         return jsonify({
             'message': 'Profile updated successfully',
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'oauth_provider': user.oauth_provider,
-                'created_at': user.created_at.isoformat()
-            }
+            'user': user.to_dict()  # Use SerializerMixin
         }), 200
         
     except ValueError as e:
@@ -163,7 +134,6 @@ def update_profile():
         return jsonify({'error': 'Failed to update profile'}), 500
 
 @user_bp.route('/friends', methods=['GET'])
-
 def get_friends():
     """Get current user's friends"""
     user_id = g.user.id
@@ -179,22 +149,10 @@ def get_friends():
     
     friends = []
     
-    #add friends from sent friendships
-    for friendship in sent_friendships:
-        friend = User.query.get(friendship.friend_id)
+    for friendship in sent_friendships + received_friendships:
+        friend = User.query.get(friendship.friend_id if friendship.user_id == user_id else friendship.user_id)
         friends.append({
-            'id': friend.id,
-            'username': friend.username,
-            'friendship_id': friendship.id,
-            'since': friendship.updated_at.isoformat()
-        })
-    
-    # add friends from received friendships
-    for friendship in received_friendships:
-        friend = User.query.get(friendship.user_id)
-        friends.append({
-            'id': friend.id,
-            'username': friend.username,
+            **friend.to_dict(),  # Use SerializerMixin
             'friendship_id': friendship.id,
             'since': friendship.updated_at.isoformat()
         })
@@ -202,7 +160,6 @@ def get_friends():
     return jsonify(friends), 200
 
 @user_bp.route('/friends/requests', methods=['GET'])
-
 def get_friend_requests():
     """Get pending friend requests"""
     user_id = g.user.id
@@ -217,37 +174,12 @@ def get_friend_requests():
         friend_id=user_id, status='pending'
     ).all()
     
-    sent = []
-    for req in sent_requests:
-        friend = User.query.get(req.friend_id)
-        sent.append({
-            'id': req.id,
-            'friend': {
-                'id': friend.id,
-                'username': friend.username
-            },
-            'created_at': req.created_at.isoformat()
-        })
+    sent = [{'id': req.id, 'friend': User.query.get(req.friend_id).to_dict(), 'created_at': req.created_at.isoformat()} for req in sent_requests]
+    received = [{'id': req.id, 'user': User.query.get(req.user_id).to_dict(), 'created_at': req.created_at.isoformat()} for req in received_requests]
     
-    received = []
-    for req in received_requests:
-        user = User.query.get(req.user_id)
-        received.append({
-            'id': req.id,
-            'user': {
-                'id': user.id,
-                'username': user.username
-            },
-            'created_at': req.created_at.isoformat()
-        })
-    
-    return jsonify({
-        'sent': sent,
-        'received': received
-    }), 200
+    return jsonify({'sent': sent, 'received': received}), 200
 
 @user_bp.route('/friends/request', methods=['POST'])
-
 def send_friend_request():
     """Send a friend request to another user"""
     user_id = g.user.id
@@ -311,7 +243,6 @@ def send_friend_request():
         return jsonify({'error': 'Failed to send friend request'}), 500
 
 @user_bp.route('/friends/request/<int:request_id>/respond', methods=['POST'])
-
 def respond_to_friend_request(request_id):
     """Accept or reject a friend request"""
     user_id = g.user.id
@@ -339,13 +270,7 @@ def respond_to_friend_request(request_id):
         
         return jsonify({
             'message': f'Friend request {data["status"]}',
-            'friendship': {
-                'id': friendship.id,
-                'user_id': friendship.user_id,
-                'friend_id': friendship.friend_id,
-                'status': friendship.status,
-                'updated_at': friendship.updated_at.isoformat()
-            }
+            'friendship': friendship.to_dict()  # Use SerializerMixin
         }), 200
         
     except Exception as e:
@@ -354,7 +279,6 @@ def respond_to_friend_request(request_id):
         return jsonify({'error': 'Failed to process friend request'}), 500
 
 @user_bp.route('/friends/<int:friendship_id>', methods=['DELETE'])
-
 def remove_friend(friendship_id):
     """Remove a friend (delete friendship)"""
     user_id = g.user.id
@@ -378,7 +302,6 @@ def remove_friend(friendship_id):
         return jsonify({'error': 'Failed to remove friendship'}), 500
 
 @user_bp.route('/search', methods=['GET'])
-
 def search_users():
     """Search for users by username"""
     query = request.args.get('q', '')
@@ -392,11 +315,6 @@ def search_users():
         User.id != g.user.id
     ).limit(10).all()
     
-    results = []
-    for user in users:
-        results.append({
-            'id': user.id,
-            'username': user.username
-        })
+    results = [user.to_dict() for user in users]  # Use SerializerMixin
     
     return jsonify(results), 200

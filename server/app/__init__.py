@@ -5,7 +5,11 @@ from flask_bcrypt import Bcrypt
 from flask_restful import Api
 from flask_cors import CORS
 from .config import Config
+from .routes import register_routes
 import os
+
+
+# from .models import Book, FileMetadata, User, Note, Friendship
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -33,6 +37,7 @@ def create_app(testing=False):
     api.init_app(app)
     CORS(app)
 
+    register_routes(app)
 
     return app
 

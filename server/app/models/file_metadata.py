@@ -2,13 +2,17 @@ from app import db
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import validates
+from sqlalchemy_serializer import SerializerMixin  # Import SerializerMixin
 import re
 
-class FileMetadata(db.Model):
+class FileMetadata(db.Model, SerializerMixin):  # Add SerializerMixin
     __tablename__ = 'file_metadata'
 
     __table_args__ = {'extend_existing': True}
     
+    # Enable serialization for specific fields
+    serialize_only = ('id', 'file_name', 'file_type', 'size', 'book_id', 'uploaded_at')
+
     id = db.Column(db.Integer, primary_key=True)
     file_name = db.Column(db.String(255), nullable=False)
     file_type = db.Column(db.Enum('txt', 'html', 'docx', 'pdf', name='file_type_enum'), nullable=False)

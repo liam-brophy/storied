@@ -1,8 +1,6 @@
 from flask import Blueprint, request, jsonify
 from sqlalchemy import or_, and_
-from server.app.models.user import User
-from server.app.models.friendship import Friendship
-from server.app.models.book import Book
+from app.models import User, Friendship, Book
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 
@@ -23,22 +21,14 @@ def get_friends():
             )
         ).all()
         
-        friends_list = []
-        
-        for friendship in friendships:
-            # Determine which ID is the friend
-            friend_id = friendship.friend_id if friendship.user_id == current_user_id else friendship.user_id
-            
-            # Get the friend's user object
-            friend = User.query.get(friend_id)
-            
-            if friend:
-                friends_list.append({
-                    "id": friend.id,
-                    "username": friend.username,
-                    "friendship_id": friendship.id,
-                    "created_at": friendship.created_at.isoformat() if hasattr(friendship, 'created_at') else None
-                })
+        friends_list = [
+            {
+                **User.query.get(friendship.friend_id if friendship.user_id == current_user_id else friendship.user_id).to_dict(),
+                "friendship_id": friendship.id,
+                "created_at": friendship.created_at.isoformat() if hasattr(friendship, 'created_at') else None
+            }
+            for friendship in friendships if User.query.get(friendship.friend_id if friendship.user_id == current_user_id else friendship.user_id)
+        ]
         
         return jsonify({
             "friends": friends_list,
@@ -60,21 +50,14 @@ def get_friend_requests():
             Friendship.status == 'pending'
         ).all()
         
-        requests_list = []
-        
-        for request in pending_requests:
-            # Get the requestor's user object
-            requestor = User.query.get(request.user_id)
-            
-            if requestor:
-                requests_list.append({
-                    "id": request.id,
-                    "user": {
-                        "id": requestor.id,
-                        "username": requestor.username
-                    },
-                    "created_at": request.created_at.isoformat() if hasattr(request, 'created_at') else None
-                })
+        requests_list = [
+            {
+                "id": request.id,
+                "user": User.query.get(request.user_id).to_dict(),
+                "created_at": request.created_at.isoformat() if hasattr(request, 'created_at') else None
+            }
+            for request in pending_requests if User.query.get(request.user_id)
+        ]
         
         return jsonify({
             "requests": requests_list,
@@ -265,25 +248,12 @@ def get_friend_books(friend_id):
             )
         ).all()
         
-        books_list = []
-        
-        for book in books:
-            books_list.append({
-                "id": book.id,
-                "title": book.title,
-                "author": book.author,
-                "genre": book.genre,
-                "is_public": book.is_public,
-                "uploaded_at": book.created_at.isoformat() if hasattr(book, 'created_at') else None
-            })
+        books_list = [book.to_dict() for book in books]
         
         friend = User.query.get(friend_id)
         
         return jsonify({
-            "friend": {
-                "id": friend.id,
-                "username": friend.username
-            },
+            "friend": friend.to_dict(),
             "books": books_list,
             "count": len(books_list)
         })

@@ -1,15 +1,29 @@
 import React from "react";
-import AppRoutes from "./routes";
-import { ThemeProvider } from "./ThemeContext";
-import { StoriesProvider } from "./StoriesContext";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import { BooksProvider } from "./contexts/BookContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import Layout from "./components/app/Layout/Layout";
+import BookList from "./components/books/BookList";
+import BookContent from "./components/books/BookContent";
+import LoginForm from "./components/auth/LoginForm";
 import "./index.css";
 
 function App() {
   return (
     <ThemeProvider>
-      <StoriesProvider>
-        <AppRoutes />
-      </StoriesProvider>
+      <AuthProvider>
+        <BooksProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<Layout />} />
+              <Route path="/books" element={<BookList />} />
+              <Route path="/books/:id" element={<BookContent />} />
+              <Route path="/login" element={<LoginForm />} />
+            </Routes>
+          </Router>
+        </BooksProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }
