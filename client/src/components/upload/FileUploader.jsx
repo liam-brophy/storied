@@ -1,100 +1,193 @@
-import React, { useState } from 'react';
-import { Upload, AlertCircle } from 'lucide-react';
-// import { Alert, AlertDescription } from '@/components/ui/alert';
+import React, { useState, useRef } from 'react'; // Added useRef
+import { Upload, AlertCircle, CheckCircle } from 'lucide-react';
 
-const StoryUpload = ({ onUpload }) => {
-  const [dragActive, setDragActive] = useState(false);
-  const [error, setError] = useState('');
+// Define API_URL if not using proxy, otherwise remove it
+// Example using Vite env vars: const API_URL = import.meta.env.VITE_API_URL || '';
+// If using proxy just use relative paths like '/api/books'
 
-  const processFile = async (file) => {
-    if (!file.name.endsWith('.txt')) {
-      setError('Please upload a .txt file');
+const FileUploader = () => { // Renaming to BookUploadForm might be clearer
+  const [file, setFile] = useState(null);
+  const [title, setTitle] = useState('');
+  const [author, setAuthor] = useState('');
+  const [genre, setGenre] = useState('Fiction');
+  // --- Removed is_public state, assuming default or handled differently? ---
+  // If needed: const [isPublic, setIsPublic] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [selectedFileName, setSelectedFileName] = useState(''); // For display
+  const fileInputRef = useRef(null); // To clear the input
+
+  const handleFileChange = (e) => {
+    const selected = e.target.files[0];
+    setFile(selected);
+    setSelectedFileName(selected ? selected.name : '');
+    setMessage(''); // Clear message on new selection
+    setIsSuccess(false);
+  };
+
+  // --- REMOVED createBook and uploadFile functions ---
+
+  const handleUpload = async (e) => {
+    e.preventDefault();
+
+    if (!file || !title || !author) {
+      setMessage('Title, Author, and File are required.');
+      setIsSuccess(false);
       return;
     }
 
+    setUploading(true);
+    setMessage('Uploading...');
+    setIsSuccess(false);
+
+    // --- Construct ONE FormData object ---
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('author', author);
+    formData.append('genre', genre); // Send genre
+    formData.append('is_public', 'true'); // Send 'true' or 'false' as string for backend
+    // If is_public state exists: formData.append('is_public', isPublic.toString());
+    formData.append('file', file); // The actual file object
+
     try {
-      const text = await file.text();
-      
-      // Generate a unique filename for the content
-      const filename = `${file.name.replace(/\s+/g, '-').toLowerCase()}`;
-      
-      // Create story object matching your data structure
-      const newStory = {
-        id: `story-${Date.now()}`,
-        image: "/placeholder-cover.jpg",
-        title: file.name.replace('.txt', ''),
-        author: "Unknown",
-        contentPath: `/data/${filename}`
-      };
+      // --- Send ONE request to /api/books ---
+      // Use relative path if using proxy, otherwise prepend API_URL
+      const response = await fetch(`/api/books`, {
+        method: 'POST',
+        body: formData,
+        // NO 'Content-Type' header needed for FormData with fetch
+      });
 
-      onUpload({ storyData: newStory, content: text });
-      setError('');
-    } catch (err) {
-      setError('Error reading file. Please try again.');
+      if (!response.ok) { // Checks for 2xx status codes
+        // Try to get error details from backend response
+        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error message' }));
+        throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json(); // Get the created book data
+      setMessage(`Book '${data.title}' uploaded successfully!`);
+      setIsSuccess(true);
+
+      // --- Clear the form ---
+      setTitle('');
+      setAuthor('');
+      setGenre('Fiction');
+      setFile(null);
+      setSelectedFileName('');
+      if (fileInputRef.current) {
+          fileInputRef.current.value = ""; // Clear the file input visually
+      }
+      // setIsPublic(true); // Reset if using state for it
+
+    } catch (error) {
+      console.error('Error during upload:', error);
+      setMessage(`Upload failed: ${error.message}`);
+      setIsSuccess(false);
+    } finally {
+      setUploading(false);
     }
   };
 
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      await processFile(file);
-    }
-  };
-
-  const handleChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      await processFile(file);
-    }
-  };
-
+  // --- JSX Structure (keeping your class names) ---
   return (
-    <div className="story-upload-container">
-      <div
-        className={`story-upload-dropzone ${dragActive ? 'story-upload-dropzone--active' : ''}`}
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-      >
-        <input
-          type="file"
-          accept=".txt"
-          onChange={handleChange}
-          className="story-upload-input"
-        />
-        
-        <Upload className="story-upload-icon" />
-        <p className="story-upload-text">
-          Drag and drop your story file here, or click to select
-        </p>
-        <p className="story-upload-subtext">
-          Only .txt files are supported
-        </p>
-      </div>
+    <div className="story-upload-container"> {/* Your class */}
+      <h2 className="upload-page-title">Upload a Book</h2> {/* Your class */}
 
-      {error && (
-        <Alert variant="destructive" className="story-upload-alert">
-          <AlertCircle className="story-upload-alert-icon" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+      <form onSubmit={handleUpload} className="flex flex-col gap-4">
+        {/* Title Input */}
+        <div>
+          <label htmlFor="book-title" className="block text-sm font-medium">Title:</label> {/* Added htmlFor */}
+          <input
+            id="book-title" // Added id
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            className="w-full p-2 border rounded"
+          />
+        </div>
+
+        {/* Author Input */}
+        <div>
+          <label htmlFor="book-author" className="block text-sm font-medium">Author:</label> {/* Added htmlFor */}
+          <input
+            id="book-author" // Added id
+            type="text"
+            value={author}
+            onChange={(e) => setAuthor(e.target.value)}
+            required
+            className="w-full p-2 border rounded"
+          />
+        </div>
+
+        {/* Genre Select */}
+        <div>
+          <label htmlFor="book-genre" className="block text-sm font-medium">Genre:</label> {/* Added htmlFor */}
+          <select
+            id="book-genre" // Added id
+            value={genre}
+            onChange={(e) => setGenre(e.target.value)}
+            className="w-full p-2 border rounded"
+          >
+            <option>Fiction</option>
+            <option>Non-Fiction</option>
+            <option>Thriller</option>
+            <option>Romance</option>
+            {/* Consider adding 'Unknown' or a default empty option */}
+          </select>
+        </div>
+
+        {/* File Input Area */}
+        {/* You might need to adjust styling/logic for drag-drop appearance */}
+        {/* This uses a label to trigger the hidden input */}
+        <div className="form-group"> {/* Using a generic class name */}
+           <label htmlFor="book-file-input" className={`story-upload-dropzone ${file ? 'story-upload-dropzone--active' : ''}`}> {/* Your class */}
+              <input
+                id="book-file-input" // Added id
+                type="file"
+                onChange={handleFileChange}
+                required
+                ref={fileInputRef} // Add ref here
+                className="story-upload-input" // Your class - likely hidden
+                accept=".pdf,.epub,.mobi,.txt,.docx" // Add accepted types
+              />
+              <Upload className="story-upload-icon" /> {/* Your class */}
+              {/* Display selected file name or prompt */}
+              {selectedFileName ? (
+                  <>
+                    <p className="story-upload-text">{selectedFileName}</p> {/* Your class */}
+                    <p className="story-upload-subtext">Click or drag to change</p> {/* Your class */}
+                  </>
+              ) : (
+                 <>
+                    <p className="story-upload-text">Drag & drop your file here</p> {/* Your class */}
+                    <p className="story-upload-subtext">or click to browse</p> {/* Your class */}
+                 </>
+              )}
+            </label>
+        </div>
+
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={uploading}
+          className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-700" // Your Tailwind classes
+        >
+          {uploading ? 'Uploading...' : 'Upload Book'} {/* Changed text */}
+        </button>
+      </form>
+
+      {/* Status Message */}
+      {message && (
+        <div className={`story-upload-alert ${isSuccess ? 'text-green-500' : 'text-red-500'}`}> {/* Your class */}
+          {isSuccess ? <CheckCircle className="story-upload-alert-icon" /> : <AlertCircle className="story-upload-alert-icon" />} {/* Your class */}
+          <span className="ml-2">{message}</span>
+        </div>
       )}
     </div>
   );
 };
 
-export default StoryUpload;
+export default FileUploader; // Or BookUploadForm

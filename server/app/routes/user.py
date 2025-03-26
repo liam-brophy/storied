@@ -1,10 +1,14 @@
-from flask import Blueprint, request, jsonify, g, current_app
+from flask import Blueprint, request, jsonify, g, current_app, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 from app.models import User, Friendship
-# from .auth import auth_required, create_access_token
+from sqlalchemy.exc import IntegrityError
+from .auth import auth_required
 
 user_bp = Blueprint('user', __name__, url_prefix='/api/users')
+
+
+#error handler global for 404s
 
 @user_bp.route('/register', methods=['POST'])
 def register():
@@ -23,13 +27,6 @@ def register():
         if len(password) < 8:
             return jsonify({'error': 'Password must be at least 8 characters long'}), 400
         
-        # Check if username or email already exists
-        if User.query.filter_by(username=data['username']).first():
-            return jsonify({'error': 'Username already taken'}), 400
-        
-        if User.query.filter_by(email=data['email']).first():
-            return jsonify({'error': 'Email already registered'}), 400
-        
         # Create new user
         new_user = User(
             username=data['username'],
@@ -40,17 +37,18 @@ def register():
         
         db.session.add(new_user)
         db.session.commit()
+
+        session['user_id'] = new_user.id
         
         return jsonify({
             'message': 'User registered successfully',
             'user': new_user.to_dict()  # Use SerializerMixin
         }), 201
         
-    except ValueError as e:
+    except (ValueError, TypeError, AttributeError, IntegrityError) as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 400
+        return jsonify({'error': str(e)}), 422
     except Exception as e:
-        db.session.rollback()
         current_app.logger.error(f"Error registering user: {str(e)}")
         return jsonify({'error': 'Failed to register user'}), 500
 
@@ -67,6 +65,8 @@ def login():
         if not data.get('password'):
             return jsonify({'error': 'Password is required'}), 400
         
+
+        #data.get('username') or data.get('email')   .first()
         # Find user by username or email
         if data.get('username'):
             user = User.query.filter_by(username=data['username']).first()
@@ -76,6 +76,8 @@ def login():
         # Check if user exists and password is correct
         if not user or not check_password_hash(user.password_hash, data['password']):
             return jsonify({'error': 'Invalid credentials'}), 401
+
+        session['user_id'] = user.id
         
         return jsonify({
             'message': 'Login successful',
@@ -83,9 +85,30 @@ def login():
         }), 200
     except Exception as e:
         current_app.logger.error(f"Error during login: {str(e)}")
-        return jsonify({'error': 'Failed to log in'}), 500
+        return jsonify({'error': str(e)}), 500
+
+
+
+@user_bp.route('/logout', methods=['DELETE'])
+def logout():
+    try:
+        session.pop('user_id', None)
+        return jsonify(''), 204
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@user_bp.route('/me', methods=['GET'])
+@auth_required
+def get_current_user():
+    try:
+        return jsonify(g.user.to_dict()), 200
+    except:
+        return jsonify({'error': str(e)}), 500
+
 
 @user_bp.route('/profile', methods=['GET'])
+@auth_required
 def get_profile():
     """Get current user's profile"""
     user = g.user

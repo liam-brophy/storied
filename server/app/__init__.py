@@ -6,9 +6,11 @@ from flask_restful import Api
 from flask_cors import CORS
 from .config import Config
 from .routes import register_routes
+from dotenv import load_dotenv, find_dotenv
 import os
 
 
+load_dotenv()
 # from .models import Book, FileMetadata, User, Note, Friendship
 
 db = SQLAlchemy()

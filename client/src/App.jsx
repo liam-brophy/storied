@@ -7,6 +7,7 @@ import Layout from "./components/app/Layout/Layout";
 import BookList from "./components/books/BookList";
 import BookContent from "./components/books/BookContent";
 import LoginForm from "./components/auth/LoginForm";
+import UploadPage from './pages/UploadPage';
 import "./index.css";
 
 function App() {
@@ -16,10 +17,11 @@ function App() {
         <BooksProvider>
           <Router>
             <Routes>
-              <Route path="/" element={<Layout />} />
+            <Route path="/" element={<Layout />} />
               <Route path="/books" element={<BookList />} />
               <Route path="/books/:id" element={<BookContent />} />
               <Route path="/login" element={<LoginForm />} />
+              <Route path="/upload" element={<UploadPage />} />
             </Routes>
           </Router>
         </BooksProvider>

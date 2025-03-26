@@ -17,7 +17,7 @@ class Book(db.Model, SerializerMixin):
     s3_url = db.Column(db.String(255), nullable=False)
     file_size = db.Column(db.Integer, nullable=False)
     file_type = db.Column(db.String(50), nullable=False)
-    uploaded_by_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete="CASCADE"), nullable=False)
+    uploaded_by_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete="CASCADE"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
@@ -44,8 +44,12 @@ class Book(db.Model, SerializerMixin):
 
     @validates('uploaded_by_id')
     def validate_uploader(self, key, user_id):
-        # Use deferred import to avoid circular dependency
-        from .user import User
+        # ---> ADD THIS CHECK <---
+        if user_id is None:
+            return None  # Allow None to pass through the validator
+        # ---> END OF ADDED CHECK <---
+
+        # Original check for non-None IDs remains
         if User.query.get(user_id) is None:
             raise ValueError('Uploaded by user does not exist')
         return user_id

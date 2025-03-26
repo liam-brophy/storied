@@ -5,6 +5,8 @@ from sqlalchemy.orm import validates
 from sqlalchemy_serializer import SerializerMixin  # Import SerializerMixin
 import re
 
+from app.models.book import Book
+
 class FileMetadata(db.Model, SerializerMixin):  # Add SerializerMixin
     __tablename__ = 'file_metadata'
 

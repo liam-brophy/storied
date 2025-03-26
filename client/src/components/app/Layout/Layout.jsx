@@ -7,9 +7,9 @@ const Layout = () => {
       <NavBar />
       <main>
         <div className="homepage">
-          <h1>Welcome to the E-Reader App</h1>
+          <h1>Home Page</h1>
           <p>
-            Explore our collection of books, manage your notes, and enjoy a truly engaging reading experience.
+            Books yet to be rendered.
           </p>
           {/* Add additional homepage content or links as needed */}
         </div>

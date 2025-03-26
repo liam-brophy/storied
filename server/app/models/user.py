@@ -29,6 +29,17 @@ class User(db.Model, SerializerMixin):  # Add SerializerMixin
     # sent_friendships = db.relationship('Friendship', backref='user', lazy=True, foreign_keys='friendships.user_id')
     # received_friendships = db.relationship('Friendship', backref='friend', lazy=True, foreign_keys='friendships.friend_id')
     
+
+#authenticate here 
+#method takes potential password and compares to user pass
+#return true if match, false if not 
+
+
+
+#hybrid property to set pass
+#handle password here
+
+
     @validates('username')
     def validate_username(self, key, username):
         if not username:
