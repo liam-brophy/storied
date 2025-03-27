@@ -1,9 +1,34 @@
 from flask import Blueprint, request, jsonify, g, current_app
 from app import db
 from app.models import Note, Book
-# from .auth import auth_required
+from .auth import auth_required
 
 notes_bp = Blueprint('note', __name__, url_prefix='/api/notes')
+
+
+@notes_bp.route('', methods=['GET']) # <-- Ensure 'GET' is listed here
+@auth_required
+def get_notes():
+    """Get notes for the current user, optionally filtered by book_id."""
+    try:
+        book_id_filter = request.args.get('book_id', type=int) # Get optional book_id query param
+
+        query = Note.query.filter_by(user_id=g.user.id) # Always filter by logged-in user
+
+        if book_id_filter:
+            query = query.filter_by(book_id=book_id_filter)
+
+        notes = query.order_by(Note.created_at.desc()).all() # Example ordering
+
+        # Assuming Note model has a to_dict() method
+        return jsonify([note.to_dict() for note in notes]), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error fetching notes for user {g.user.id}: {str(e)}")
+        return jsonify({'error': 'Failed to retrieve notes', 'details': str(e)}), 500
+
+
+
 
 @notes_bp.route('/book/<int:book_id>', methods=['GET'])
 def get_notes_by_book(book_id):
