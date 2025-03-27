@@ -1,0 +1,38 @@
+.app-footer {
+    background-color: #f0f0f0; /* Use variables? var(--footer-bg, #f0f0f0) */
+    color: #555; /* Use variables? var(--footer-text, #555) */
+    padding: 1rem;
+    text-align: center;
+    margin-top: auto; /* Push to bottom in flex container */
+    border-top: 1px solid #ddd; /* Use variables? var(--footer-border, #ddd) */
+    font-size: 0.9em;
+    /* Adjust padding-left based on navbar state */
+    padding-left: 70px;
+    transition: padding-left 0.3s ease;
+  }
+  
+  [data-theme="dark"] .app-footer {
+     background-color: #111; /* Darker footer background */
+     color: #aaa;
+     border-top-color: #333;
+  }
+  
+  body:has(.navbar-container.expanded) .app-footer {
+    padding-left: 220px; /* Wider padding when navbar expanded */
+  }
+  
+  
+  .app-footer p {
+    margin: 0.25rem 0; /* Adjust paragraph margin */
+  }
+  
+  .app-footer a {
+    color: #007bff; /* Example link color */
+    text-decoration: none;
+  }
+  .app-footer a:hover {
+    text-decoration: underline;
+  }
+  [data-theme="dark"] .app-footer a {
+    color: #60a5fa; /* Lighter blue for dark mode */
+  }

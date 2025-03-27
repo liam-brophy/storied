@@ -1,0 +1,114 @@
+.bookList { /* Renamed from storyList */
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* Responsive columns */
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 60px auto 2rem auto; /* Adjust top margin to clear fixed navbar */
+    padding-left: 70px; /* Add padding to clear collapsed navbar */
+    transition: padding-left 0.3s ease; /* Smooth transition for padding */
+  }
+  
+  /* Adjust padding when navbar is expanded */
+  body:has(.navbar-container.expanded) .bookList {
+    padding-left: 220px; /* Wider padding = expanded navbar width + margin */
+  }
+  
+  
+  /* Styling for the link wrapping the card */
+  .bookCardLink {
+    display: block; /* Make the link a block element */
+    text-decoration: none; /* Remove underline from link */
+    color: inherit; /* Inherit text color */
+    aspect-ratio: 2 / 3; /* Set aspect ratio on the link/container */
+    position: relative; /* Needed for absolute positioning of children */
+    overflow: hidden;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  }
+  
+  .bookCardLink:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+  
+  .bookCard {
+    /* No position/size needed here if link handles it */
+    height: 100%;
+    width: 100%;
+    display: flex; /* Use flexbox for content */
+    flex-direction: column; /* Stack content vertically */
+    justify-content: flex-end; /* Align info to bottom */
+    position: relative; /* For potential cover image */
+  }
+  
+  /* If you have a cover image */
+  .bookCover { /* Renamed from storyCover */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    z-index: 1; /* Behind the info overlay */
+    /* border-radius: 0.5rem; /* Inherited from parent link */
+  }
+  
+  .bookInfo { /* Renamed from storyInfo */
+    position: relative; /* Changed from absolute */
+    z-index: 2; /* Above cover image */
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%); /* Gradient overlay */
+    padding: 1rem;
+    color: white; /* Text color for overlay */
+    opacity: 1; /* Always visible overlay */
+    transition: background 0.2s ease-in-out;
+  }
+  
+  .bookCardLink:hover .bookInfo {
+     background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.1) 100%); /* Darker gradient on hover */
+  }
+  
+  .bookTitle { /* Renamed from story-title */
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin: 0 0 0.25rem 0;
+    /* color: white; Inherited */
+    line-height: 1.2;
+  }
+  
+  .bookAuthor { /* Renamed from story-author */
+    font-size: 0.875rem;
+    margin: 0;
+    opacity: 0.8;
+    /* color: white; Inherited */
+  }
+  
+  /* Styles for loading/error/no-books states */
+  .loading-indicator,
+  .error-message,
+  .no-books-message {
+    padding: 2rem;
+    text-align: center;
+    margin-top: 60px; /* Adjust top margin to clear fixed navbar */
+    padding-left: 70px; /* Match BookList padding */
+  }
+  
+  body:has(.navbar-container.expanded) .loading-indicator,
+  body:has(.navbar-container.expanded) .error-message,
+  body:has(.navbar-container.expanded) .no-books-message {
+    padding-left: 220px; /* Match BookList padding */
+  }
+  
+  .error-message {
+    color: #dc3545;
+    border: 1px solid #f5c6cb;
+    background-color: #f8d7da;
+    border-radius: 0.25rem;
+  }
+  
+  .no-books-message a {
+    color: #007bff;
+    text-decoration: underline;
+  }

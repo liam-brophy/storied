@@ -1,113 +1,176 @@
-import { useState } from "react";
+// src/components/notes/NoteCard.jsx
+import React, { useState } from "react"; // Correct React import
 import { IconButton, TextField, Button } from "@mui/material";
 import { Edit, Delete, Save, Cancel } from "@mui/icons-material";
+import apiClient from "../../services/api/axios"; // Adjust path as needed
 
+// Assume the note object now looks like:
+// { id: 1, excerpt: "...", page_number: 5, comment: "...", book_id: 12, book_title: "Example Book", ... }
 
-const NoteCard = ({ note, setNotes, stories }) => {
+const NoteCard = ({ note, onDelete, onUpdate }) => {
+  // State for managing edit mode and the edited comment text
   const [isEditing, setIsEditing] = useState(false);
-  const [updatedComment, setUpdatedComment] = useState(note.comment);
+  const [editComment, setEditComment] = useState(note.comment || ''); // Initialize with current comment
+  const [error, setError] = useState(null); // Local error state for edit/delete actions
+  const [isProcessing, setIsProcessing] = useState(false); // State for disabling buttons during API calls
 
-  const handleEditNote = () => {
-    fetch(`http://localhost:3001/notes/${note.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ comment: updatedComment }),
-    })
-      .then((response) => {
-        if (response.ok) {
-          setNotes((prevNotes) =>
-            prevNotes.map((n) =>
-              n.id === note.id ? { ...n, comment: updatedComment } : n
-            )
-          );
-          setIsEditing(false);
-        } else {
-          console.error("Failed to edit the note. Response status:", response.status);
-        }
-      })
-      .catch((error) => console.error("Error during PATCH request:", error));
+  // --- Event Handlers ---
+
+  // Enter Edit Mode
+  const handleEnterEdit = () => {
+    setEditComment(note.comment || ''); // Reset edit field to current comment
+    setError(null); // Clear any previous errors
+    setIsEditing(true);
   };
 
-  const handleDeleteNote = (noteId) => {
-    fetch(`http://localhost:3001/notes/${noteId}`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-    })
-      .then((response) => {
-        if (response.ok) {
-          setNotes((prevNotes) => prevNotes.filter((note) => note.id !== noteId));
-        } else {
-          console.error("Failed to delete the note. Response status:", response.status);
-        }
-      })
-      .catch((error) => console.error("Error during DELETE request:", error));
+  // Cancel Edit Mode
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setError(null); // Clear error on cancel
+    // No need to reset editComment state here, handleEnterEdit does it next time
+  };
+
+  // Save Edited Note (API Call)
+  const handleSaveEdit = async () => {
+    if (editComment === note.comment) {
+        // No change, just exit edit mode
+        setIsEditing(false);
+        return;
+    }
+
+    setError(null);
+    setIsProcessing(true);
+    try {
+      const response = await apiClient.put(`/notes/${note.id}`, { comment: editComment });
+      // Call the onUpdate prop passed from NotesPage with the updated note data from API
+      onUpdate(response.data);
+      setIsEditing(false); // Exit edit mode on successful save
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || "Failed to save note.";
+      console.error("Error updating note:", errorMsg, err);
+      setError(errorMsg); // Set local error to display to user
+      // Optional: alert(`Error: ${errorMsg}`);
+    } finally {
+       setIsProcessing(false);
+    }
+  };
+
+  // Delete Note (API Call)
+  const handleDelete = async () => {
+    // Use the onDelete prop directly passed from NotesPage, which handles confirmation and API call
+     setError(null); // Clear local error before attempting delete
+    try {
+        setIsProcessing(true); // Disable buttons while deleting
+        await onDelete(note.id); // Call parent's delete handler
+        // No need to do anything else here, parent manages state
+    } catch (err) {
+        // This catch might not be strictly necessary if parent handles errors,
+        // but can be useful for local feedback
+        const errorMsg = err.message || "Failed to initiate delete.";
+        console.error("Error during delete initiation in NoteCard:", errorMsg, err);
+        setError(errorMsg);
+        setIsProcessing(false); // Re-enable buttons if parent's call failed before disabling
+    }
+    // No finally needed here if parent always handles the processing state
   };
 
 
-
-  const story = stories.find((story) => story.id === note.story);
-  const storyTitle = story?.title || "Unknown Story";
-  const storyAuthor = story?.author || "Unknown Author";
-  const truncatedText = note.text.length > 50 ? note.text.slice(0, 50) + "..." : note.text;
+  // --- Data for Display ---
+  // Use optional chaining and fallbacks for safety
+  const bookTitle = note.book_title || "Unknown Book";
+  // const bookAuthor = note.book_author || "Unknown Author"; // If available
+  const excerptText = note.excerpt || "";
+  const truncatedExcerpt = excerptText.length > 50 ? excerptText.slice(0, 50) + "..." : excerptText;
+  const pageNum = note.page_number;
 
   return (
+    // Use the same container class as before
     <div className="note-card-container">
+      {/* Apply theme classes or styles if needed */}
       <div className="note-card">
         <div className="note-content">
           <div className="note-header">
-            <p className="note-story-title">{storyTitle}</p>
-            <p className="note-story-author">{storyAuthor}</p>
+             {/* Display Book Title */}
+            <span className="note-story-title">{bookTitle}</span>
+            {/* Display Page Number if available */}
+            {pageNum && <span className="note-page-number">p. {pageNum}</span>}
           </div>
 
-          <div className="note-text">
-            <p className="note-page-number">
-              page {note.page} | "{truncatedText}"
-            </p>
-          </div>
+          {/* Display Excerpt if available */}
+          {truncatedExcerpt && (
+            <div className="note-excerpt">
+                <p>"{truncatedExcerpt}"</p>
+            </div>
+          )}
+
 
           {isEditing ? (
-            <>
+            // --- Edit State ---
+            <div className="note-edit-section">
               <TextField
                 fullWidth
                 multiline
                 variant="outlined"
-                value={updatedComment}
-                onChange={(e) => setUpdatedComment(e.target.value)}
+                label="Edit Comment"
+                value={editComment}
+                onChange={(e) => setEditComment(e.target.value)}
+                disabled={isProcessing}
+                error={!!error} // Show error state on TextField
+                helperText={error} // Display error message below TextField
+                className="note-edit-textarea" // Use class from CSS
               />
-            </>
-          ) : (
-            <div className="note-comment">
-            <p>{note.comment}</p>
             </div>
+          ) : (
+             // --- View State ---
+             <div className="note-comment">
+                <p>{note.comment || <i>No comment added.</i>}</p>
+             </div>
           )}
         </div>
 
+        {/* Action Buttons */}
         <div className="note-actions">
           {isEditing ? (
             <>
               <Button
                 className="save-button"
-                variant="contained"
+                variant="contained" // Keep MUI styling
+                size="small"
                 startIcon={<Save />}
-                onClick={handleEditNote}
+                onClick={handleSaveEdit}
+                disabled={isProcessing} // Disable while saving
               >
                 Save
               </Button>
               <Button
                 className="cancel-button"
+                size="small"
                 startIcon={<Cancel />}
-                onClick={() => setIsEditing(false)}
+                onClick={handleCancelEdit}
+                disabled={isProcessing} // Disable if processing (though less critical for cancel)
               >
                 Cancel
               </Button>
             </>
           ) : (
             <>
-              <IconButton className="edit-button" onClick={() => setIsEditing(true)}>
-                <Edit />
+              <IconButton
+                className="edit-button"
+                size="small"
+                onClick={handleEnterEdit}
+                aria-label="Edit note"
+                disabled={isProcessing}
+              >
+                <Edit fontSize="small"/>
               </IconButton>
-              <IconButton className="delete-button" onClick={() => handleDeleteNote(note.id)}>
-                <Delete />
+              <IconButton
+                className="delete-button"
+                size="small"
+                onClick={handleDelete} // Call the local handler that calls the prop
+                aria-label="Delete note"
+                disabled={isProcessing}
+              >
+                <Delete fontSize="small"/>
               </IconButton>
             </>
           )}

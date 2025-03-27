@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { TextField, InputAdornment } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import "../index.css";
+import "./SearchBar.css";
 
 
 function SearchBar({ onSearch }) {

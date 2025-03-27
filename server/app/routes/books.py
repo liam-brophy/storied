@@ -7,7 +7,7 @@ from botocore.exceptions import ClientError
 import uuid
 from ipdb import set_trace
 import logging
-
+from .auth import auth_required
 
 from app.models import Book, FileMetadata, User
 # from app.routes.auth import auth_required
@@ -215,6 +215,74 @@ def create_book():
         current_app.logger.error(f"Error creating book: {str(e)}", exc_info=True)
         # Avoid exposing internal error details in production responses
         return jsonify({'error': str(e)}), 500
+
+
+
+
+@books_bp.route('/<int:book_id>', methods=['DELETE'])
+@auth_required
+def delete_book(book_id):
+    """Delete a specific book owned by the current user"""
+    try:
+        book = Book.query.get_or_404(book_id)
+
+        # Verify ownership using the correct column name
+        if book.uploaded_by_id != g.user.id: # <--- CORRECTED
+            current_app.logger.warning(f"User {g.user.id} attempted to delete book {book_id} owned by user {book.uploaded_by_id}")
+            return jsonify({'error': 'Forbidden: You do not own this book'}), 403
+
+        s3_url_to_delete = book.s3_url
+        s3_key_to_delete = None # You need logic to extract the key from the URL
+        bucket_name = current_app.config.get('S3_BUCKET') # Get bucket name from config
+
+        if s3_url_to_delete:
+            # EXAMPLE: Simple parsing (adjust based on your URL format)
+            # Assumes URL like https://<bucket>.s3.<region>.amazonaws.com/<key>
+            # Or https://s3.<region>.amazonaws.com/<bucket>/<key>
+            try:
+                # This parsing is basic and might need adjustment
+                if f"/{bucket_name}/" in s3_url_to_delete:
+                     s3_key_to_delete = s3_url_to_delete.split(f"/{bucket_name}/", 1)[1]
+                elif f"//{bucket_name}." in s3_url_to_delete: # subdomain style
+                     s3_key_to_delete = s3_url_to_delete.split(f"{bucket_name}.s3.{current_app.config.get('S3_REGION')}.amazonaws.com/", 1)[1] # Adjust region if needed
+
+                if not s3_key_to_delete:
+                     current_app.logger.error(f"Could not extract S3 key from URL: {s3_url_to_delete}")
+
+            except Exception as parse_error:
+                current_app.logger.error(f"Error parsing S3 URL {s3_url_to_delete}: {parse_error}")
+                s3_key_to_delete = None # Ensure deletion doesn't proceed with bad key
+
+
+        # 4. Delete the book record from the database
+        db.session.delete(book)
+        db.session.commit() # Commit deletion
+
+        # 5. Delete the associated file from S3 AFTER successful DB commit
+        if s3_key_to_delete and bucket_name:
+            try:
+                import boto3
+                s3 = boto3.client(
+                    's3',
+                    aws_access_key_id=current_app.config.get('S3_KEY'),
+                    aws_secret_access_key=current_app.config.get('S3_SECRET')
+                )
+                s3.delete_object(Bucket=bucket_name, Key=s3_key_to_delete)
+                current_app.logger.info(f"Successfully deleted S3 object: s3://{bucket_name}/{s3_key_to_delete}")
+            except Exception as s3_e: # Catch specific boto3 errors if possible
+                # Log error if S3 deletion fails, but proceed as DB record is gone
+                current_app.logger.error(f"Error deleting S3 object s3://{bucket_name}/{s3_key_to_delete} after deleting DB record for book {book_id}: {str(s3_e)}")
+        elif not bucket_name:
+             current_app.logger.error(f"S3_BUCKET config missing, cannot delete S3 object for book {book_id}")
+
+
+        current_app.logger.info(f"User {g.user.id} successfully deleted book {book_id}")
+        return '', 204
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting book {book_id} for user {g.user.id}: {str(e)}")
+        return jsonify({'error': 'Failed to delete book', 'details': str(e)}), 500
 
 
 @books_bp.route('/<int:book_id>/upload', methods=['POST'])

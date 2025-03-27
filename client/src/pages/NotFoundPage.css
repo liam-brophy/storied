@@ -1,0 +1,54 @@
+.not-found-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+    min-height: 60vh; /* Give it some minimum height */
+  }
+  
+  .not-found-heading {
+    font-size: 2rem;
+    color: #dc3545; /* Error color */
+    margin-bottom: 1rem;
+  }
+  
+  /* Theme specific heading color */
+  [data-theme="dark"] .not-found-heading {
+    color: #f87171; /* Lighter red for dark mode */
+  }
+  
+  
+  .not-found-message {
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+    color: #555; /* Use theme variable? */
+  }
+  
+  [data-theme="dark"] .not-found-message {
+    color: #ccc;
+  }
+  
+  .not-found-link {
+    display: inline-block;
+    padding: 0.6rem 1.2rem; /* Slightly larger padding */
+    background-color: #007bff; /* Primary button color */
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+  }
+  
+  .not-found-link:hover {
+    background-color: #0056b3; /* Darker shade on hover */
+  }
+  
+  /* Optional: Dark theme link */
+  [data-theme="dark"] .not-found-link {
+    background-color: #0d6efd; /* Slightly different blue */
+  }
+  [data-theme="dark"] .not-found-link:hover {
+    background-color: #0a58ca;
+  }

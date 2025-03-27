@@ -5,6 +5,7 @@ import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import CommentBankIcon from '@mui/icons-material/CommentBank';
 import { useCallback } from "react";
+import './CommentPopover.css'
 
 const ReaderView = () => {
   const { storyId } = useParams();

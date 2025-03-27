@@ -1,0 +1,185 @@
+.notes-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    padding: 1rem;
+    max-width: 700px; /* Max width for notes */
+    margin: 60px auto 2rem auto; /* Center and add margin for navbar */
+    padding-left: 70px; /* Adjust for collapsed navbar */
+    transition: padding-left 0.3s ease;
+  }
+  
+  body:has(.navbar-container.expanded) .notes-container {
+    padding-left: 220px; /* Adjust for expanded navbar */
+  }
+  
+  /* Wraps the entire note card and action buttons */
+  .note-card-container {
+    display: flex;
+    width: 100%; /* Take full width within notes-container */
+    align-items: flex-start;
+    gap: 10px;
+    position: relative; /* For potential absolute positioning inside */
+  }
+  
+  /* Main card styling */
+  .note-card {
+    flex: 1;
+    border: 0.5px solid var(--note-card-border-light, black);
+    padding: 15px;
+    background-color: var(--note-card-background-light, white);
+    border-radius: 8px;
+    color: var(--note-card-text-light, black);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    /* Removed fixed width, let flexbox handle it */
+    /* width: 500px; */
+  }
+  
+  /* Theme variations */
+  [data-theme="dark"] .note-card {
+    background-color: var(--note-card-background-dark, #333);
+    border: 0.5px solid var(--note-card-border-dark, white);
+    color: var(--note-card-text-dark, white);
+  }
+  
+  .note-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px; /* Space below header */
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+    gap: 5px;
+  }
+  
+  /* .note-story-info {
+    /* Group title and author   } */
+  
+  .note-story-title {
+    font-weight: bold;
+    font-size: 1.1em;
+  }
+  
+  .note-story-author {
+    font-weight: normal;
+    color: gray;
+    font-size: 0.9em;
+    margin-left: 5px;
+  }
+  
+  .note-page-number {
+    color: gray;
+    font-size: 0.9em;
+    white-space: nowrap; /* Prevent page number from wrapping */
+  }
+  
+  /* Where the selected text/excerpt is displayed */
+  .note-excerpt {
+    /* text-align: right; /* Removed this, maybe not always desired */
+    margin-bottom: 10px; /* Space below excerpt */
+    font-style: italic;
+    border-left: 3px solid #ccc; /* Indicate quotation */
+    padding-left: 10px;
+  }
+  [data-theme="dark"] .note-excerpt {
+    border-left-color: #555;
+  }
+  
+  /* The user's comment/note */
+  .note-comment {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: solid 0.5px var(--note-card-border-light, black); /* Use variable */
+    /* font-weight: bold; /* Removed bold, maybe not always wanted */
+  }
+  [data-theme="dark"] .note-comment {
+     border-top-color: var(--note-card-border-dark, white);
+  }
+  
+  /* Textarea when editing */
+  .note-edit-textarea {
+    width: 100%;
+    min-height: 60px;
+    margin-top: 10px;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    font: inherit; /* Use same font as rest of app */
+  }
+  [data-theme="dark"] .note-edit-textarea {
+    background-color: #222;
+    color: var(--text-color-dark, white);
+    border-color: #555;
+  }
+  
+  
+  /* Buttons stacked vertically */
+  .note-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    margin-top: 5px; /* Align closer to top */
+  }
+  
+  /* Common button styles */
+  .note-actions button {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    min-width: 80px; /* Give buttons some width */
+    font-size: 0.9rem;
+  }
+  [data-theme="dark"] .note-actions button {
+     color: #eee; /* Default text color for buttons in dark mode */
+  }
+  
+  
+  /* Specific button styles */
+  .save-button {
+    background-color: #c8fedb;
+    color: #222; /* Dark text */
+  }
+  .save-button:hover {
+    background-color: #8effa9;
+  }
+  
+  .cancel-button {
+    background-color: #eee;
+    color: #333;
+  }
+  .cancel-button:hover {
+    background-color: #ddd;
+  }
+  [data-theme="dark"] .cancel-button {
+     background-color: #444;
+     color: #eee;
+  }
+  [data-theme="dark"] .cancel-button:hover {
+     background-color: #555;
+  }
+  
+  
+  .edit-button,
+  .delete-button {
+    background: none; /* Transparent background */
+    color: #888; /* Grey icon color */
+    padding: 4px; /* Smaller padding for icon buttons */
+    min-width: auto; /* No min width */
+    border-radius: 50%; /* Make icon buttons circular */
+  }
+  [data-theme="dark"] .edit-button,
+  [data-theme="dark"] .delete-button {
+     color: #aaa;
+  }
+  
+  .edit-button:hover {
+    background-color: rgba(0, 255, 110, 0.1);
+    color:#00c742;
+  }
+  .delete-button:hover {
+    background-color: rgba(255, 0, 0, 0.1);
+    color:#ff0000;
+  }

@@ -1,16 +1,33 @@
 import React, { useState } from "react";
-import { NavLink, Link } from "react-router-dom";
-import HomeIcon from '@mui/icons-material/Home';
-import DescriptionIcon from '@mui/icons-material/Description';
-import { useTheme } from "../../../contexts/ThemeContext";
+import { NavLink, useNavigate } from "react-router-dom"; // Use NavLink for all links needing active state
+import HomeIcon from '@mui/icons-material/Home'; // Represents 'Books' page after login
+import DescriptionIcon from '@mui/icons-material/Description'; // Notes
+import AccountCircleIcon from '@mui/icons-material/AccountCircle'; // Profile
+import LoginIcon from '@mui/icons-material/Login'; // Login
+import PersonAddIcon from '@mui/icons-material/PersonAdd'; // Register
+import LogoutIcon from '@mui/icons-material/Logout'; // Logout
+import UploadIcon from '@mui/icons-material/Upload'; // Upload
 import BedtimeIcon from '@mui/icons-material/Bedtime';
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
-import UploadIcon from '@mui/icons-material/Upload';
+import { useTheme } from "../../../contexts/ThemeContext"; // Adjust path if needed
+import { useAuth } from "../../../contexts/AuthContext"; // Adjust path if needed
+import './NavBar.css'
 
 function NavBar() {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { theme, toggleTheme } = useTheme();
+  const { isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate(); // Keep for potential future use
+
   const toggleNav = () => setIsCollapsed(!isCollapsed);
+
+  const handleLogout = async () => {
+    await logout();
+    // AuthContext should handle redirect
+  };
+
+  // Helper for NavLink active class styling
+  const getNavLinkClass = ({ isActive }) => (isActive ? "active-link" : "");
 
   return (
     <div className={`navbar-container ${isCollapsed ? "collapsed" : ""}`}>
@@ -19,28 +36,74 @@ function NavBar() {
       </button>
       <nav className={`nav ${isCollapsed ? "collapsed" : "expanded"}`}>
         <ul>
-          <li>
-            <NavLink 
-              to="/" 
-              className={({ isActive }) => (isActive ? "active-link" : "")}
-            >
-              <HomeIcon />
-            </NavLink>
-          </li>
-          <li>
-            <NavLink 
-              to="/notes" 
-              className={({ isActive }) => (isActive ? "active-link" : "")}
-            >
-              <DescriptionIcon />
-            </NavLink>
-          </li>
-          <li>
-            <Link to="/upload" className="nav-link"><UploadIcon /></Link>
-          </li>
-          <li>
-            <button className="theme-toggle" onClick={toggleTheme}>
+          {isAuthenticated ? (
+            // --- Authenticated Links ---
+            <>
+              <li>
+                {/* Link to Books page */}
+                <NavLink to="/books" className={getNavLinkClass}>
+                  <HomeIcon />
+                  {!isCollapsed && <span className="nav-text">Books</span>}
+                </NavLink>
+              </li>
+              <li>
+                {/* Link to Notes page */}
+                <NavLink to="/notes" className={getNavLinkClass}>
+                  <DescriptionIcon />
+                  {!isCollapsed && <span className="nav-text">Notes</span>}
+                </NavLink>
+              </li>
+              <li>
+                {/* Link to Upload page */}
+                <NavLink to="/upload" className={getNavLinkClass}>
+                  <UploadIcon />
+                  {!isCollapsed && <span className="nav-text">Upload</span>}
+                </NavLink>
+              </li>
+              <li>
+                {/* Link to Profile page */}
+                <NavLink to="/profile" className={getNavLinkClass}>
+                  <AccountCircleIcon />
+                   {!isCollapsed && <span className="nav-text">Profile</span>}
+                </NavLink>
+              </li>
+              <li>
+                {/* Logout Button */}
+                <button onClick={handleLogout} className="nav-button">
+                  <LogoutIcon />
+                   {!isCollapsed && <span className="nav-text">Logout</span>}
+                </button>
+              </li>
+            </>
+          ) : (
+            // --- Unauthenticated Links ---
+            <>
+              <li>
+                <NavLink to="/login" className={getNavLinkClass}>
+                  <LoginIcon />
+                   {!isCollapsed && <span className="nav-text">Login</span>}
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/register" className={getNavLinkClass}>
+                  <PersonAddIcon />
+                   {!isCollapsed && <span className="nav-text">Register</span>}
+                </NavLink>
+              </li>
+              {/* Optional: Link Home icon to Login when logged out? Or remove? */}
+              {/* <li>
+                 <NavLink to="/login" className={getNavLinkClass}>
+                   <HomeIcon />
+                 </NavLink>
+              </li> */}
+            </>
+          )}
+
+          {/* Theme Toggle - Always Visible */}
+          <li className="theme-toggle-item"> {/* Added class for potential specific styling */}
+            <button className="theme-toggle nav-button" onClick={toggleTheme}> {/* Added nav-button class */}
               {theme === "light" ? <BedtimeIcon /> : <WbSunnyIcon />}
+               {!isCollapsed && <span className="nav-text">Theme</span>}
             </button>
           </li>
         </ul>

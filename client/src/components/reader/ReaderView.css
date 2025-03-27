@@ -1,0 +1,195 @@
+/* src/components/books/BookContent.css */
+
+.reader-container {
+    padding: 1rem; /* Add some padding */
+    margin: 60px auto 2rem auto; /* Center and add margin for navbar */
+    padding-left: 70px; /* Adjust for collapsed navbar */
+    transition: padding-left 0.3s ease;
+  }
+  
+  body:has(.navbar-container.expanded) .reader-container {
+    padding-left: 220px; /* Adjust for expanded navbar */
+  }
+  
+  
+  .running-hed {
+    margin-bottom: 1rem; /* Space below header */
+    display: flex;
+    flex-direction: column; /* Stack title/author vertically */
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .reader-title {
+    font-family: "argent-pixel-cf", sans-serif; /* Ensure font is loaded */
+    font-weight: 400; /* Adjusted weight */
+    font-style: normal;
+    font-size: 1.2rem; /* Adjust size */
+    margin-bottom: 0.25rem; /* Space between title and author */
+    color: #858585; /* Use theme variables? */
+  }
+  
+  .reader-author {
+    font-family: 'argent-pixel-cf', sans-serif;
+    font-weight: normal;
+    font-size: 1rem;
+    color: #bab8b8; /* Use theme variables? */
+  }
+  
+  
+  /* Main reader text area */
+  .reader-text-area {
+    position: relative; /* For positioning pagination */
+    max-width: 800px;
+    margin: 0 auto; /* Center the text block */
+  }
+  
+  .reader-text {
+    text-align: justify;
+    height: calc(80vh - 100px); /* Adjust height, consider header/footer/controls */
+    overflow-y: auto; /* Allow vertical scrolling if needed, better than hidden */
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    margin-bottom: 1rem; /* Space before controls */
+    font-size: var(--reader-font-size, 16px); /* Use variable */
+    line-height: 1.6; /* Improve readability */
+    /* background-color: #00ffd9; Debugging only */
+  }
+  
+  /* Styling within pre tags if used */
+  .reader-text pre {
+    font-family: inherit; /* Inherit main reader font */
+    font-size: inherit; /* Inherit main reader size */
+    line-height: inherit; /* Inherit main reader line height */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    margin: 0; /* Remove default pre margin */
+  }
+  
+  
+  /* Pagination - positioned relative to reader-text-area */
+  .pagination-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    padding: 0 10px; /* Add padding */
+    box-sizing: border-box; /* Include padding in width */
+    pointer-events: none; /* Allow text selection underneath */
+  }
+  
+  .pagination-controls button {
+     pointer-events: auto; /* Make buttons clickable */
+  }
+  
+  
+  .prev-button,
+  .next-button {
+    background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent background */
+    color: rgb(50, 50, 50);
+    border: none;
+    padding: 10px 15px; /* Make buttons easier to click */
+    font-size: 1.5rem; /* Larger icons/text */
+    cursor: pointer;
+    border-radius: 50%; /* Circular buttons */
+    transition: background-color 0.3s ease, color 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+  [data-theme="dark"] .prev-button,
+  [data-theme="dark"] .next-button {
+      background-color: rgba(50, 50, 50, 0.7);
+      color: #eee;
+  }
+  
+  .prev-button:hover,
+  .next-button:hover {
+    background-color: rgba(0, 255, 110, 0.8);
+    color: black;
+  }
+  [data-theme="dark"] .prev-button:hover,
+  [data-theme="dark"] .next-button:hover {
+      background-color: rgba(0, 255, 110, 0.9);
+  }
+  
+  /* Bottom controls area */
+  .reader-bottom-controls {
+    max-width: 800px; /* Match reader text width */
+    margin: 1rem auto 0 auto; /* Center and add space above */
+    padding: 0 1rem; /* Add some horizontal padding */
+  }
+  
+  .progress-bar-container {
+    width: 100%;
+    background-color: #e9ecef; /* Lighter background */
+    height: 8px; /* Slightly thicker */
+    border-radius: 4px;
+    overflow: hidden; /* Ensure progress bar stays within bounds */
+    margin-bottom: 0.5rem; /* Space below progress bar */
+  }
+  [data-theme="dark"] .progress-bar-container {
+      background-color: #444;
+  }
+  
+  .progress-bar {
+    height: 100%;
+    background-color: #007bff; /* Example color */
+    transition: width 0.3s ease;
+    border-radius: 4px;
+  }
+  
+  .page-and-font-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+  
+  
+  .page-number {
+    font-size: 0.9rem;
+    color: #6c757d;
+  }
+  [data-theme="dark"] .page-number {
+    color: #aaa;
+  }
+  
+  .page-number span:last-child {
+    color: lightgray;
+  }
+  
+  .font-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  
+  .font-controls button {
+    background-color: #f8f9fa; /* Light background */
+    color: #495057;
+    border: 1px solid #dee2e6;
+    padding: 4px 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  [data-theme="dark"] .font-controls button {
+    background-color: #444;
+    color: #eee;
+    border-color: #555;
+  }
+  
+  .font-controls button:hover {
+    background-color: #e9ecef;
+    color: #212529;
+  }
+  [data-theme="dark"] .font-controls button:hover {
+    background-color: #555;
+  }
