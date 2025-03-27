@@ -37,7 +37,7 @@ const BookList = () => {
             <h2>My Books</h2> {/* Added a heading */}
             {books.map((book) => (
                 // Wrap the entire card in a Link to make it clickable
-                <Link to={`/books/${book.id}`} key={book.id} className="bookCardLink"> {/* Added key here, and a className */}
+                <Link to={`/reader/${book.id}`} key={book.id} className="bookCardLink">
                     <div className="bookCard"> {/* Use the class name from your original */}
                         {/* Make title potentially clickable too, or rely on card link */}
                         <h3>{book.title || 'Untitled Book'}</h3>

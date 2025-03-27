@@ -1,20 +1,13 @@
 import React from "react";
 import '../index.css';
-import { useNavigate } from "react-router-dom";
 
-const BookCard = ({ story }) => {
-  const navigate = useNavigate();
-
-  const handleReadStory = () => {
-    navigate(`/reader/${story.id}`);
-  };
-
+const BookCard = ({ book }) => { //Renamed story to book
   return (
-    <div onClick={handleReadStory} className="storyCard">
-      <img className="storyCover" src={story.image}></img>
-      <div className="storyInfo">
-        <h2 className="storyTitle" >{story.title}</h2>
-        <p className="storyAuthor" >{story.author}</p>
+    <div className="storyCard"> {/*No onClick anymore*/}
+      <img className="storyCover" src={book.image} alt={book.title} /> {/* Access book.image */}
+      <div className="bookInfo"> {/* Renamed storyInfo to bookInfo */}
+        <h2 className="bookTitle" >{book.title}</h2> {/* Renamed storyTitle to bookTitle */}
+        <p className="bookAuthor" >{book.author}</p> {/* Renamed storyAuthor to bookAuthor */}
       </div>
     </div>
   );

@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import FriendList from '../components/friends/FriendList';  // Correct import
+import FriendRequests from '../components/friends/FriendRequests';  // Correct import
+import FriendSearch from '../components/friends/FriendSearch';  // Correct import
 
 const ProfilePage = () => {
-  const { user, logout, updateUserProfile } = useAuth();
+  const { user, logout, updateUserProfile, deleteUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    username: user?.username || '',
-    email: user?.email || '',
-    password: '', // Only for changing password
+      username: user?.username || '',
+      email: user?.email || '',
+      password: '', // Only for changing password
   });
   const [updateStatus, setUpdateStatus] = useState({ message: '', error: '' });
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false); // Loading state for delete
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
 
   // Update form data if user context changes (e.g., after initial load)
@@ -60,6 +65,27 @@ const ProfilePage = () => {
      }
   };
 
+  const handleDeleteAccount = () => {
+      setShowDeleteConfirmation(true); // Show confirmation modal
+  };
+
+  const confirmDeleteAccount = async () => {
+    setIsDeleting(true); // Start delete loading state
+    try {
+      await deleteUser();
+      // No need to redirect; the AuthContext handles logout/redirect
+    } catch (error) {
+      setUpdateStatus({ message: '', error: error.response?.data?.error || 'Failed to delete account.' });
+    } finally {
+      setIsDeleting(false); // End delete loading state
+      setShowDeleteConfirmation(false); // Hide confirmation modal
+    }
+  };
+
+  const cancelDeleteAccount = () => {
+    setShowDeleteConfirmation(false); // Cancel deletion
+  };
+
 
   if (!user) {
     // This shouldn't typically happen if ProtectedRoute is working, but good fallback
@@ -80,6 +106,9 @@ const ProfilePage = () => {
           {/* Display other user details from user.to_dict() as needed */}
           <button onClick={() => setIsEditing(true)}>Edit Profile</button>
           <button onClick={logout} style={{ marginLeft: '10px', backgroundColor: 'salmon' }}>Logout</button>
+          <button onClick={handleDeleteAccount} style={{ marginLeft: '10px', backgroundColor: 'red', color: 'white' }}>
+              Delete Account
+          </button>
         </div>
       ) : (
         <form onSubmit={handleUpdateProfile}>
@@ -132,11 +161,39 @@ const ProfilePage = () => {
       )}
 
        {/* Placeholder for Friend Functionality - Add later */}
-       {/* <div>
-            <h2>Friends</h2>
-            <p>(Friend list, requests, search will go here)</p>
-       </div> */}
-    </div>
+       <div>
+           <h2>Friends</h2>
+           <FriendList />
+       </div>
+
+       <div>
+           <h2>Friend Requests</h2>
+           <FriendRequests />
+       </div>
+
+       <div>
+           <h2>Find Friends</h2>
+           <FriendSearch />
+       </div>
+
+       {/* Delete Account Confirmation Modal */}
+       {showDeleteConfirmation && (
+           <div style={{
+               position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.5)',
+               display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+           }}>
+               <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '5px' }}>
+                   <p>Are you sure you want to delete your account? This action cannot be undone.</p>
+                   <button onClick={confirmDeleteAccount} disabled={isDeleting}>
+                       {isDeleting ? 'Deleting...' : 'Yes, Delete My Account'}
+                   </button>
+                   <button onClick={cancelDeleteAccount} disabled={isDeleting} style={{ marginLeft: '10px' }}>
+                       Cancel
+                   </button>
+               </div>
+           </div>
+       )}
+   </div>
   );
 };
 

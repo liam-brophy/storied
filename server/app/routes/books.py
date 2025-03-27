@@ -22,21 +22,8 @@ s3_client = boto3.client(
 )
 S3_BUCKET = os.getenv('S3_BUCKET_NAME')
 
-
-print(f"Value assigned to S3_BUCKET variable: >>>{S3_BUCKET}<<<") # Check value assigned to variable
-print("--- Finished routes/books.py top-level ---")
-
 books_bp = Blueprint('books', __name__, url_prefix='/api/books')
 
-
-#STANDARADIZED RESPONSE
-# def api_response(success, message, data=None, status=200):
-#     """Standardized API response format"""
-#     return jsonify({
-#         'success': success,
-#         'message': message,
-#         'data': data
-#     }), status
 
 def validate_book_access(book, user_id):
     """

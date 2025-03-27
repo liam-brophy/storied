@@ -15,6 +15,7 @@ import BookList from "./components/books/BookList"; // Check path
 import BookContent from "./components/books/BookContent"; // Check path
 // import HomePage from './pages/HomePage';
 import NotesPage from './pages/NotesPage';
+import PdfReaderView from './components/reader/PdfReaderView'; // Check path
 
 import "./index.css";
 
@@ -30,9 +31,11 @@ function App() {
             <Routes>
               {/* Routes WITH the Layout */}
               <Route path="/" element={<Layout />}>
+              {/*<TestPdfViewer /> REMOVED HERE*/}
                  <Route index element={<Navigate to="/books" replace />} />
                 <Route path="books" element={<BookList />} />
                 <Route path="books/:id" element={<BookContent />} />
+                <Route path="reader/:bookId" element={<PdfReaderView />} />
                 <Route
                   path="notes" // Relative path -> /notes
                   element={

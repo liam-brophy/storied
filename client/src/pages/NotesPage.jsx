@@ -21,6 +21,7 @@ const NotesPage = () => {
       // Don't fetch if not authenticated
       if (!isAuthenticated) {
         setNotes([]); // Clear notes if logged out
+        console.log("NotesPage: User is not authenticated, clearing notes.");
         return;
       }
 
@@ -37,8 +38,14 @@ const NotesPage = () => {
         console.log("NotesPage: Fetching all notes");
       }
 
+      console.log("NotesPage: API URL:", apiUrl); // Log apiUrl
+
       try {
         const response = await apiClient.get(apiUrl);
+        console.log("NotesPage: API Response:", response); // Log the entire response
+        console.log("NotesPage: API Response Data:", response.data); // Log response.data
+        console.log("NotesPage: API Response Data or []:", response.data || []); //Log data or empty array
+
         setNotes(response.data || []); // Set notes, default to empty array
       } catch (err) {
         console.error("NotesPage: Failed to fetch notes:", err.response?.data || err.message);
@@ -49,6 +56,7 @@ const NotesPage = () => {
       }
     };
 
+    console.log("NotesPage: useEffect triggered - isAuthenticated:", isAuthenticated, "bookId:", bookId); //Log when useEffect is triggered.
     fetchNotes();
     // Re-run effect if authentication status or bookId changes
   }, [isAuthenticated, bookId]);

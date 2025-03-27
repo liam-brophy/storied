@@ -53,6 +53,7 @@ def get_notes_by_book(book_id):
         return jsonify({'error': 'Failed to fetch notes'}), 500
 
 @notes_bp.route('', methods=['POST'])
+@auth_required
 def create_note():
     """Create a new note"""
     try:
@@ -88,7 +89,7 @@ def create_note():
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error creating note: {str(e)}")
-        return jsonify({'error': 'Failed to create note'}), 500
+        return jsonify({'error': str(e)}), 500
 
 @notes_bp.route('/<int:note_id>', methods=['GET'])
 def get_note(note_id):

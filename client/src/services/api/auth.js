@@ -36,6 +36,6 @@ export const getUserProfile = async () => {
 
 // Matches PUT /api/users/profile
 export const updateUserProfile = async (profileData) => {
-  const response = await apiClient.put('/users/profile', profileData);
+  const response = await apiClient.patch('/users/profile', profileData);
   return response.data;
 };

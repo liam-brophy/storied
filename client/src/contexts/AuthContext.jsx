@@ -1,13 +1,5 @@
-// client/src/context/AuthContext.js (Recommended location)
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-// Import the specific API call functions from auth.js
-import {
-  loginUser,
-  registerUser,
-  logoutUser,
-  getCurrentUser,
-  updateUserProfile as updateUserProfileApi // Rename import
-} from '../services/api/auth'; // Correct path to your API module
+import axios from 'axios'; // Import axios directly
 import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext(null);
@@ -20,15 +12,11 @@ export const AuthProvider = ({ children }) => {
   const checkUserSession = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Use the imported axios-based API function
-      // It already returns response.data
-      const userData = await getCurrentUser();
-      setUser(userData);
+      const response = await axios.get('/api/users/me');  // Direct axios call
+      setUser(response.data); // Access the data directly
     } catch (error) {
-      // Axios error object has error.response for HTTP errors
       setUser(null);
-      // The interceptor already logged the error, but you can add specific handling here
-      console.log('No active session or error checking session:', error.response?.data?.error || error.message);
+      console.error('No active session or error checking session:', error.response?.data?.error || error.message);
     } finally {
       setIsLoading(false);
     }
@@ -40,23 +28,21 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      // loginUser now uses axios and returns response.data
-      const responseData = await loginUser(credentials);
-      setUser(responseData.user);
-      return responseData; // Contains 'message' and 'user'
+      const response = await axios.post('/api/users/login', credentials); // Direct axios call
+      setUser(response.data.user);
+      return response.data; // Returns message and user
     } catch (error) {
       console.error("Login failed context:", error.response?.data || error.message);
       setUser(null);
-      // Re-throw the axios error object so components can access response details
       throw error;
     }
   };
 
   const register = async (userData) => {
     try {
-      const responseData = await registerUser(userData);
-      setUser(responseData.user);
-      return responseData;
+      const response = await axios.post('/api/users/register', userData); // Direct axios call
+      setUser(response.data.user);
+      return response.data;
     } catch (error) {
       console.error("Registration failed context:", error.response?.data || error.message);
       setUser(null);
@@ -66,9 +52,8 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await logoutUser(); // Axios handles the request
+      await axios.delete('/api/users/logout'); // Direct axios call
     } catch (error) {
-      // Even if logout API fails, log client-side out
       console.error("Logout API call failed context:", error.response?.data || error.message);
     } finally {
       setUser(null);
@@ -78,16 +63,50 @@ export const AuthProvider = ({ children }) => {
 
   const updateUserProfile = async (profileData) => {
     try {
-        const responseData = await updateUserProfileApi(profileData); // Uses axios via the import
-        setUser(responseData.user);
-        return responseData;
+      const response = await axios.patch('/api/users/profile', profileData); // Direct axios call
+      setUser(response.data.user);
+      return response.data;
     } catch (error) {
-        console.error("Profile update failed context:", error.response?.data || error.message);
-        throw error;
+      console.error("Profile update failed context:", error.response?.data || error.message);
+      throw error;
     }
   };
 
-  // Value provided to consumers
+
+  const addFriendtoUser = async (friend_id) =>{
+    try{
+      const response = await axios.post('/api/users/friends/request', 
+          {friend_id}
+      ).then(() => {
+          if (!response.ok){
+              response.json.then((errorObj)=> {
+                  setError(errorObj.error)
+              })
+          } else {
+              response.json.then((friendship) => {
+              setUser(prevUser => ({...prevUser, sent_friendships:[...prevUser.sent_friendships, friendship]}))  
+              })
+          }   
+      })
+
+} catch (error) {
+
+}
+}
+
+
+  const deleteUser = async () => {
+    try {
+      await axios.delete('/api/users/delete'); // Adjust your API endpoint as needed
+      setUser(null); // Clear user from context
+      localStorage.removeItem('token'); // Remove token
+      navigate('/'); // Redirect to homepage or login page
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      throw error; // Re-throw the error so the component can handle it
+    }
+  };
+
   const value = {
     user,
     isAuthenticated: !!user,
@@ -96,13 +115,14 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateUserProfile,
-    checkUserSession
+    checkUserSession,
+    deleteUser,
+    addFriendtoUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Custom hook remains the same
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

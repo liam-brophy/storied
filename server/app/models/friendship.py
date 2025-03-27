@@ -2,6 +2,10 @@ from app import db
 from datetime import datetime
 from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlalchemy_serializer import SerializerMixin
+# from sqlalchemy.orm import relationship
+# from .user import User
+
+
 
 class Friendship(db.Model, SerializerMixin):
     __tablename__ = 'friendships'
@@ -32,7 +36,12 @@ class Friendship(db.Model, SerializerMixin):
         nullable=False
     )
 
-    serialize_rules = ('-user_id', '-friend_id')  # Define serialization rules
+    #Relationships
+    user = db.relationship("User", foreign_keys=[user_id], backref="sent_friend_requests")
+    friend = db.relationship("User", foreign_keys=[friend_id], backref="received_friend_requests")
+
+
+    serialize_rules = ('-user', '-friend')  # Define serialization rules
 
     def __repr__(self):
         return f'<Friendship {self.user_id} - {self.friend_id}: {self.status}>'

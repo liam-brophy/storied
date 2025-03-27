@@ -1,4 +1,3 @@
-// src/components/notes/NoteCard.jsx
 import React, { useState } from "react"; // Correct React import
 import { IconButton, TextField, Button } from "@mui/material";
 import { Edit, Delete, Save, Cancel } from "@mui/icons-material";
@@ -41,7 +40,7 @@ const NoteCard = ({ note, onDelete, onUpdate }) => {
     setError(null);
     setIsProcessing(true);
     try {
-      const response = await apiClient.put(`/notes/${note.id}`, { comment: editComment });
+      const response = await apiClient.patch(`/notes/${note.id}`, { comment: editComment });
       // Call the onUpdate prop passed from NotesPage with the updated note data from API
       onUpdate(response.data);
       setIsEditing(false); // Exit edit mode on successful save
