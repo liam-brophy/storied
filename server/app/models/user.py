@@ -35,9 +35,15 @@ class User(db.Model, SerializerMixin):  # Add SerializerMixin
 
     @property
     def friends(self):
-        sent_friends = [{'id':friendship.friend.id, 'username':friendship.friend.username, 'email':friendship.friend.email,} for friendship in self.sent_friendships if friendship.status == 'accepted']
-        received_friends = [{'id':friendship.user.id, 'username':friendship.user.username, 'email':friendship.user.email,} for friendship in self.received_friendships if friendship.status == 'accepted']
-        return list(sent_friends.extend(received_friends))
+        sent_friends = [{'id': friendship.friend.id,
+                        'username': friendship.friend.username,
+                        'email': friendship.friend.email}
+                        for friendship in self.sent_friendships if friendship.status == 'accepted']
+        received_friends = [{'id': friendship.user.id,
+                            'username': friendship.user.username,
+                            'email': friendship.user.email}
+                            for friendship in self.received_friendships if friendship.status == 'accepted']
+        return sent_friends + received_friends
 
 
 #authenticate here 

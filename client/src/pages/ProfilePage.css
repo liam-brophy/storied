@@ -1,0 +1,264 @@
+.profile-page {
+    font-family: sans-serif;
+    padding: 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .profile-container {
+    width: 80%;
+    max-width: 800px;
+    background-color: #fff;
+    border: 1px solid #333; /* Thin black outline */
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .profile-header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .profile-title {
+    font-size: 32px; /* Increased font size */
+    margin-bottom: 15px;
+    color: #333;
+  }
+  
+  .profile-info {
+    margin-bottom: 15px;
+    font-size: 16px;
+  }
+  
+  .profile-info strong {
+    font-weight: bold;
+    margin-right: 5px;
+    color: #555;
+  }
+  
+  .profile-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+  }
+  
+  .profile-button {
+    padding: 8px 12px; /* Smaller button size */
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px; /* Smaller font size */
+    background-color: #ddd; /* More subtle background */
+    color: #333;
+    transition: background-color 0.2s ease-in-out;
+  }
+  
+  .profile-button:hover {
+    background-color: #ccc; /* Slightly darker hover */
+  }
+  
+  .profile-button--edit {
+    background-color: #007bff;
+    color: white;
+  }
+  
+  .profile-button--edit:hover {
+    background-color: #0056b3;
+  }
+  
+  .profile-button--logout {
+    background-color: salmon;
+    color: white;
+  }
+  
+  .profile-button--logout:hover {
+    background-color: #e9967a;
+  }
+  
+  .profile-button--delete {
+    background-color: red;
+    color: white;
+  }
+  
+  .profile-button--delete:hover {
+    background-color: #c82333;
+  }
+  
+  /* Edit Profile Form */
+  .profile-edit-form {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .profile-edit-form h3 {
+    font-size: 24px; /* Increased font size */
+    margin-bottom: 15px;
+    color: #333;
+  }
+  
+  .profile-form-group {
+    margin-bottom: 15px;
+  }
+  
+  .profile-form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #555;
+  }
+  
+  .profile-form-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+  }
+  
+  .profile-form-group input:disabled {
+    background-color: #eee;
+    cursor: not-allowed;
+  }
+  
+  .profile-form-group p {
+    color: orange;
+    font-size: 0.8em;
+  }
+  
+  .profile-form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+  }
+  
+  .profile-form-button {
+    padding: 8px 12px; /* Smaller button size */
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px; /* Smaller font size */
+    color: white;
+    transition: background-color 0.2s ease-in-out;
+  }
+  
+  .profile-form-button--save {
+    background-color: #28a745;
+  }
+  
+  .profile-form-button--save:hover {
+    background-color: #1e7e34;
+  }
+  
+  .profile-form-button--cancel {
+    background-color: #6c757d;
+  }
+  
+  .profile-form-button--cancel:hover {
+    background-color: #5a6268;
+  }
+  
+  /* Friend Functionality Module */
+  .profile-friends-module {
+    margin-top: 30px;
+    padding: 20px;
+    border: 1px solid #333; /* Thin black outline */
+    border-radius: 8px;
+    width: 100%; /* Ensure it stays within the container */
+    box-sizing: border-box; /* Include padding and border in width */
+  }
+  
+  .profile-friends-module h2 {
+    font-size: 24px; /* Increased font size */
+    margin-bottom: 15px;
+    color: #333;
+  }
+  
+  .profile-friend-search-container {
+    margin-bottom: 15px;
+  }
+  
+  .profile-friends-columns {
+    display: flex;
+    gap: 20px;
+  }
+  
+  .profile-friends-column {
+    flex: 1;
+  }
+  
+  .profile-friends-column h3 {
+    font-size: 18px; /* Increased font size */
+    margin-bottom: 10px;
+    color: #555;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+  }
+  
+  /* Delete Account Confirmation Modal */
+  .profile-delete-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .profile-delete-modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 5px;
+    text-align: center;
+  }
+  
+  .profile-delete-modal-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    justify-content: center;
+  }
+  
+  .profile-delete-modal-button {
+    padding: 8px 12px; /* Smaller button size */
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px; /* Smaller font size */
+    color: white;
+    transition: background-color 0.2s ease-in-out;
+  }
+  
+  .profile-delete-modal-button--confirm {
+    background-color: red;
+  }
+  
+  .profile-delete-modal-button--confirm:hover {
+    background-color: #c82333;
+  }
+  
+  .profile-delete-modal-button--cancel {
+    background-color: #6c757d;
+  }
+  
+  .profile-delete-modal-button--cancel:hover {
+    background-color: #5a6268;
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .profile-container {
+      width: 95%;
+    }
+  
+    .profile-friends-columns {
+      flex-direction: column;
+    }
+  }

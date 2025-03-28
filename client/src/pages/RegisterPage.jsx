@@ -1,15 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import RegisterForm from '../components/auth/RegisterForm';
+import './RegisterPage.css'; // Import CSS
 
 const RegisterPage = () => {
   return (
-    <div>
-      <h1>Register Page</h1>
-      <RegisterForm />
-      <p>
-        Already have an account? <Link to="/login">Login here</Link>
-      </p>
+    <div className="register-page">
+      <div className="register-container">
+        <RegisterForm />
+        <p>
+          Already have an account? <Link to="/login">Login here</Link>
+        </p>
+      </div>
     </div>
   );
 };

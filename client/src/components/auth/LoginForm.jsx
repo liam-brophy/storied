@@ -1,70 +1,73 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Formik, Form, Field, ErrorMessage } from 'formik';
+import * as Yup from 'yup';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const LoginForm = () => {
-  const [identifier, setIdentifier] = useState(''); // Can be username or email
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Get the location to redirect to after login, default to '/profile'
-  const from = location.state?.from?.pathname || '/profile';
+  const from = location.state?.from?.pathname || '/profile'; // Redirect after login
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
+  const validationSchema = Yup.object({
+    identifier: Yup.string()
+      .required('Username or Email is required'),
+    password: Yup.string()
+      .required('Password is required'),
+  });
 
-    // Basic check: Determine if identifier is likely an email
-    const isEmail = identifier.includes('@');
+  const initialValues = {
+    identifier: '',
+    password: '',
+  };
+
+  const handleSubmit = async (values, { setSubmitting, setFieldError }) => {
+    const isEmail = values.identifier.includes('@');
     const credentials = isEmail
-      ? { email: identifier, password }
-      : { username: identifier, password };
+      ? { email: values.identifier, password: values.password }
+      : { username: values.identifier, password: values.password };
 
     try {
       await login(credentials);
-      navigate(from, { replace: true }); // Redirect to the intended page or profile
+      navigate(from, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
+      setFieldError('general', err.response?.data?.error || 'Login failed. Please check your credentials.');
     } finally {
-      setIsLoading(false);
+      setSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Login</h2>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <div>
-        <label htmlFor="identifier">Username or Email:</label>
-        <input
-          type="text"
-          id="identifier"
-          value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
-          required
-          disabled={isLoading}
-        />
-      </div>
-      <div>
-        <label htmlFor="password">Password:</label>
-        <input
-          type="password"
-          id="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          disabled={isLoading}
-        />
-      </div>
-      <button type="submit" disabled={isLoading}>
-        {isLoading ? 'Logging in...' : 'Login'}
-      </button>
-    </form>
+    <Formik
+      initialValues={initialValues}
+      validationSchema={validationSchema}
+      onSubmit={handleSubmit}
+    >
+      {({ isSubmitting, errors }) => (
+        <Form>
+          <h2>Login</h2>
+          {errors.general && <p style={{ color: 'red' }}>{errors.general}</p>} {/* General error */}
+
+          <div>
+            <label htmlFor="identifier">Username or Email:</label>
+            <Field type="text" id="identifier" name="identifier" />
+            <ErrorMessage name="identifier" component="div" style={{ color: 'red' }} />
+          </div>
+
+          <div>
+            <label htmlFor="password">Password:</label>
+            <Field type="password" id="password" name="password" />
+            <ErrorMessage name="password" component="div" style={{ color: 'red' }} />
+          </div>
+
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Logging in...' : 'Login'}
+          </button>
+        </Form>
+      )}
+    </Formik>
   );
 };
 

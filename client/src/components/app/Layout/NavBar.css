@@ -3,29 +3,34 @@
     top: 0;
     left: 0;
     z-index: 1000;
-    /* Removed background-color here, will be handled by theme */
-    width: 50px; /* Consider making this a variable if used elsewhere */
+    width: 60px; /* Increased width from 50px for proper icon display */
     height: 100%;
     display: flex;
     flex-direction: column;
-    transition: width 0.3s ease; /* Added transition for potential expansion */
-  }
-  
-  /* Apply theme-specific background */
-  [data-theme="light"] .navbar-container {
-    background-color: var(--navbar-container-background-light, white); /* Added fallback */
-  }
-  [data-theme="dark"] .navbar-container {
-    background-color: var(--navbar-container-background-dark, black); /* Added fallback */
-  }
-  
-  /* Adjust padding-left for toggle button when navbar expands */
-  .navbar-container.expanded {
-     width: 200px; /* Example expanded width */
-  }
-  
-  
-  .toggle-btn {
+    transition: width 0.3s ease;
+}
+
+/* Apply theme-specific backgrounds */
+[data-theme="light"] .navbar-container {
+    background-color: var(--navbar-container-background-light, white);
+}
+[data-theme="dark"] .navbar-container {
+    background-color: var(--navbar-container-background-dark, black);
+}
+
+/* Expanded width when needed */
+.navbar-container.expanded {
+    width: 200px;
+}
+
+/* Update nav styles to allow icons to be fully visible */
+.nav {
+    width: 100%;
+    overflow: visible; /* Changed from hidden to visible */
+    margin-top: 10px;
+}
+
+.toggle-btn {
     /* Simplified positioning/padding a bit */
     padding: 20px 0 0 10px; /* Adjust as needed */
     align-self: flex-start; /* Align button to the start */
@@ -35,45 +40,39 @@
     border: none;
     cursor: pointer;
     transition: color 0.3s ease, transform 0.2s ease;
-    width: 40px; /* Give button area */
+    width: 30px; /* Give button area */
     text-align: center;
-  }
-  
-  [data-theme="dark"] .toggle-btn {
+}
+
+[data-theme="dark"] .toggle-btn {
     color: var(--toggle-btn-color-dark);
-  }
-  
-  .toggle-btn:hover {
+}
+
+.toggle-btn:hover {
     color: #00ff40;
     transform: scale(1.1);
-  }
-  
-  .toggle-btn:active {
+}
+
+.toggle-btn:active {
     color: #dcdcdc;
     transform: scale(1);
-  }
-  
-  /* Navigation list */
-  .nav {
-    width: 100%;
-    overflow: hidden; /* Hide text until expanded */
-    margin-top: 10px; /* Space below toggle button */
-  }
-  
-  .nav ul {
+}
+
+/* Navigation list */
+.nav ul {
     list-style: none;
     padding: 0;
     margin: 0;
-  }
-  
-  .nav ul li {
+}
+
+.nav ul li {
     margin: 1rem 0;
     /* Ensure items don't wrap */
     white-space: nowrap;
-  }
-  
-  .nav ul li a,
-  .nav ul li .nav-button { /* Style NavLinks and buttons similarly */
+}
+
+.nav ul li a,
+.nav ul li .nav-button { /* Style NavLinks and buttons similarly */
     display: flex;
     align-items: center;
     padding: 0.5rem 0.75rem; /* Consistent padding */
@@ -88,51 +87,51 @@
     width: calc(100% - 10px); /* Make clickable area wider */
     text-align: left; /* Align text left */
     font-size: 1rem; /* Ensure button font size matches links */
-  }
-  
-  .nav ul li a:hover,
-  .nav ul li .nav-button:hover {
+}
+
+.nav ul li a:hover,
+.nav ul li .nav-button:hover {
     color: #00ff40;
     background-color: rgba(0, 255, 110, 0.1); /* Subtle background on hover */
     transform: translateX(3px); /* Slight move effect */
-  }
-  
-  .nav ul li a.active-link { /* Style for active NavLink */
+}
+
+.nav ul li a.active-link { /* Style for active NavLink */
     color: #00ff40; /* Use highlight color */
     font-weight: bold;
     background-color: rgba(0, 255, 110, 0.15); /* Slightly stronger background */
-  }
-  
-  /* Hide text span by default */
-  .nav-text {
+}
+
+/* Hide text span by default */
+.nav-text {
     display: none;
     margin-left: 10px; /* Space between icon and text */
     opacity: 0;
     transition: opacity 0.3s ease 0.1s; /* Delay opacity transition */
-  }
-  
-  /* Show text when navbar is expanded */
-  .navbar-container.expanded .nav-text {
+}
+
+/* Show text when navbar is expanded */
+.navbar-container.expanded .nav-text {
     display: inline;
     opacity: 1;
-  }
-  
-  /* Specific Theme Toggle Styles */
-  .theme-toggle-item {
+}
+
+/* Specific Theme Toggle Styles */
+.theme-toggle-item {
     margin-top: auto; /* Push theme toggle towards the bottom */
     padding-bottom: 1rem; /* Add some space at the very bottom */
-  }
-  
-  .theme-toggle {
+}
+
+.theme-toggle {
     /* Inherits from .nav-button, additional styles below */
     justify-content: flex-start; /* Align icon/text left */
-  }
-  
-  /* Remove theme-specific background override if using variables */
-  /* [data-theme="light"] .theme-toggle {
+}
+
+/* Remove theme-specific background override if using variables */
+/* [data-theme="light"] .theme-toggle {
     background-color: var(--navbar-container-background-light);
-  }
-  
-  [data-theme="dark"] .theme-toggle {
+}
+
+[data-theme="dark"] .theme-toggle {
     background-color: var(--navbar-container-background-dark);
-  } */
+} */

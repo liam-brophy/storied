@@ -105,17 +105,18 @@ def logout():
 def get_current_user():
     try:
         return jsonify(g.user.to_dict()), 200
-    except Exception as e:  # Fixed typo by adding "Exception as e"
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
 @user_bp.route('/profile', methods=['GET'])
 @auth_required
 def get_profile():
-    """Get current user's profile"""
-    user = g.user
-    
-    return jsonify(user.to_dict()), 200  # Use SerializerMixin
+    try:
+        user = g.user
+        return jsonify(user.to_dict()), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @user_bp.route('/profile', methods=['PATCH'])
 @auth_required
@@ -207,50 +208,41 @@ def get_user_with_friendships(user_id):
 @user_bp.route('/friends/request', methods=['POST'])
 @auth_required
 def send_friend_request():
-    """Send a friend request to another user"""
-    user_id = g.user.id
-    data = request.json
-
-    if not data.get('friend_id'):
-        return jsonify({'error': 'Friend ID is required'}), 400
-
-    friend_id = data['friend_id']
-
-    if friend_id == user_id:
-        return jsonify({'error': 'Cannot send friend request to yourself'}), 400
-
-    # Check if friend exists
-    friend = User.query.get(friend_id)  # Fetch the friend
-
-    if not friend:
-        return jsonify({'error': 'User not found'}), 404
-
-    # Check if friendship already exists (either way)
-    existing_friendship = Friendship.query.filter(
-        ((Friendship.user_id == user_id) & (Friendship.friend_id == friend_id)) |
-        ((Friendship.user_id == friend_id) & (Friendship.friend_id == user_id))
-    ).first()
-
-    if existing_friendship:
-        if existing_friendship.status == 'accepted':
-            return jsonify({'error': 'Already friends with this user'}), 400
-        elif existing_friendship.status == 'pending':
-            return jsonify({'error': 'Friend request already pending'}), 400  # Could check who sent it
-        elif existing_friendship.status == 'rejected':  # Handle rejected requests as needed
-            existing_friendship.status = 'pending'
-            db.session.commit()
-            return jsonify({'message': 'Friend request resent'}), 200
-
     try:
-        # Create a new friendship
+        user_id = g.user.id
+        data = request.json
+
+        if not data.get('friend_id'):
+            return jsonify({'error': 'Friend ID is required'}), 400
+
+        friend_id = data['friend_id']
+
+        if friend_id == user_id:
+            return jsonify({'error': 'Cannot send friend request to yourself'}), 400
+
+        friend = User.query.get(friend_id)
+        if not friend:
+            return jsonify({'error': 'User not found'}), 404
+
+        existing_friendship = Friendship.query.filter(
+            ((Friendship.user_id == user_id) & (Friendship.friend_id == friend_id)) |
+            ((Friendship.user_id == friend_id) & (Friendship.friend_id == user_id))
+        ).first()
+
+        if existing_friendship:
+            if existing_friendship.status == 'accepted':
+                return jsonify({'error': 'Already friends with this user'}), 400
+            elif existing_friendship.status == 'pending':
+                return jsonify({'error': 'Friend request already pending'}), 400
+            elif existing_friendship.status == 'rejected':
+                existing_friendship.status = 'pending'
+                db.session.commit()
+                return jsonify({'message': 'Friend request resent'}), 200
+
         friendship = Friendship(user_id=user_id, friend_id=friend_id, status='pending')
         db.session.add(friendship)
         db.session.commit()
         return jsonify(friendship.to_dict()), 201
-
-          # Use SerializerMixin
-        # return jsonify({'message': 'Friend request sent', 'id': friendship.id}), 201
-
     except IntegrityError as e:
         db.session.rollback()
         return jsonify({'error': 'Integrity Error: Unable to send friend request'}), 400
@@ -263,24 +255,21 @@ def send_friend_request():
 @user_bp.route('/friends/request/<int:request_id>/respond', methods=['POST'])
 @auth_required
 def respond_to_friend_request(request_id):
-    """Accept or reject a friend request"""
-    user_id = g.user.id
-    data = request.json
-
-    if 'status' not in data or data['status'] not in ['accepted', 'rejected']:
-        return jsonify({'error': 'Invalid status. Must be "accepted" or "rejected"'}), 400
-
-    friendship = Friendship.query.get_or_404(request_id) # Get Friendship
-
-    # Security check: Ensure user is the receiver
-    if friendship.friend_id != user_id:
-        return jsonify({'error': 'Unauthorized to respond to this request'}), 403
-
-    if friendship.status != 'pending':
-        return jsonify({'error': 'Friend request already processed'}), 400
-
     try:
-        # Update status
+        user_id = g.user.id
+        data = request.json
+
+        if 'status' not in data or data['status'] not in ['accepted', 'rejected']:
+            return jsonify({'error': 'Invalid status. Must be "accepted" or "rejected"'}), 400
+
+        friendship = Friendship.query.get_or_404(request_id)
+
+        if friendship.friend_id != user_id:
+            return jsonify({'error': 'Unauthorized to respond to this request'}), 403
+
+        if friendship.status != 'pending':
+            return jsonify({'error': 'Friend request already processed'}), 400
+
         friendship.status = data['status']
         db.session.commit()
         return jsonify({'message': f'Friend request {data["status"]}'}), 200
@@ -293,16 +282,13 @@ def respond_to_friend_request(request_id):
 @user_bp.route('/friends/<int:friendship_id>', methods=['DELETE'])
 @auth_required
 def remove_friend(friendship_id):
-    """Remove a friend (delete friendship)"""
-    user_id = g.user.id
-
-    friendship = Friendship.query.get_or_404(friendship_id) # Get Friendship
-
-    # Security check: Ensure user is part of this friendship
-    if friendship.user_id != user_id and friendship.friend_id != user_id:
-        return jsonify({'error': 'Unauthorized to remove this friendship'}), 403
-
     try:
+        user_id = g.user.id
+        friendship = Friendship.query.get_or_404(friendship_id)
+
+        if friendship.user_id != user_id and friendship.friend_id != user_id:
+            return jsonify({'error': 'Unauthorized to remove this friendship'}), 403
+
         db.session.delete(friendship)
         db.session.commit()
         return jsonify({'message': 'Friendship removed successfully'}), 200
@@ -315,95 +301,89 @@ def remove_friend(friendship_id):
 @user_bp.route('/friends', methods=['GET'])
 @auth_required
 def get_friends():
-    """Get current user's friends"""
-    user_id = g.user.id
+    try:
+        user_id = g.user.id
+        user = get_user_with_friendships(user_id)
 
-    # Load sent and received friend requests
-    user = get_user_with_friendships(user_id)  # Use eager loading
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
 
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
+        friends = []
+        for friendship in user.sent_friend_requests:
+            if friendship.status == 'accepted':
+                friend = User.query.get(friendship.friend_id)
+                friends.append({
+                    'id': friend.id,
+                    'username': friend.username,
+                    'email': friend.email
+                })
 
-    friends = []
+        for friendship in user.received_friend_requests:
+            if friendship.status == 'accepted':
+                friend = User.query.get(friendship.user_id)
+                friends.append({
+                    'id': friend.id,
+                    'username': friend.username,
+                    'email': friend.email
+                })
 
-    # Process sent friend requests
-    for friendship in user.sent_friend_requests:
-        if friendship.status == 'accepted':
-            friend = User.query.get(friendship.friend_id)
-            friends.append({
-                'id': friend.id,
-                'username': friend.username,
-                'email': friend.email  # Include other relevant user details
-            })
-
-    # Process received friend requests
-    for friendship in user.received_friend_requests:
-        if friendship.status == 'accepted':
-            friend = User.query.get(friendship.user_id)
-            friends.append({
-                'id': friend.id,
-                'username': friend.username,
-                'email': friend.email  # Include other relevant user details
-            })
-
-    return jsonify(friends), 200
+        return jsonify(friends), 200
+    except Exception as e:
+        current_app.logger.error(f"Error fetching friends: {str(e)}")
+        return jsonify({'error': 'Failed to fetch friends'}), 500
 
 
 @user_bp.route('/friends/requests', methods=['GET'])
 @auth_required
 def get_friend_requests():
-    """Get pending friend requests"""
-    user_id = g.user.id
-    user = get_user_with_friendships(user_id)  # Use eager loading
+    try:
+        user_id = g.user.id
+        user = get_user_with_friendships(user_id)
 
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
 
-    sent_requests = []
-    received_requests = []
+        sent_requests = []
+        received_requests = []
 
-    # Sent requests
-    for friendship in user.sent_friend_requests:
-        if friendship.status == 'pending':
-            friend = User.query.get(friendship.friend_id)
-            sent_requests.append({
-                'id': friendship.id,
-                'friend_id': friend.id,
-                'friend_username': friend.username
-            })
+        for friendship in user.sent_friend_requests:
+            if friendship.status == 'pending':
+                friend = User.query.get(friendship.friend_id)
+                sent_requests.append({
+                    'id': friendship.id,
+                    'friend_id': friend.id,
+                    'friend_username': friend.username
+                })
 
-    # Received requests
-    for friendship in user.received_friend_requests:
-        if friendship.status == 'pending':
-            sender = User.query.get(friendship.user_id)
-            received_requests.append({
-                'id': friendship.id,
-                'sender_id': sender.id,
-                'sender_username': sender.username
-            })
+        for friendship in user.received_friend_requests:
+            if friendship.status == 'pending':
+                sender = User.query.get(friendship.user_id)
+                received_requests.append({
+                    'id': friendship.id,
+                    'sender_id': sender.id,
+                    'sender_username': sender.username
+                })
 
-    return jsonify({'sent': sent_requests, 'received': received_requests}), 200
-
+        return jsonify({'sent': sent_requests, 'received': received_requests}), 200
+    except Exception as e:
+        current_app.logger.error(f"Error fetching friend requests: {str(e)}")
+        return jsonify({'error': 'Failed to fetch friend requests'}), 500
 
 
 @user_bp.route('/search', methods=['GET'])
 @auth_required
 def search_users():
-    """Search for users by username"""
-    query = request.args.get('q', '').strip()
-    set_trace()
     try:
+        query = request.args.get('q', '').strip()
+
         if not query:
             return jsonify({'error': 'Query parameter is required'}), 400
 
-        # Search for users by username or email
         users = User.query.filter(
             (User.username.ilike(f'%{query}%'))
         ).all()
 
-        # Serialize user data
         user_list = [user.to_dict() for user in users]
-
         return jsonify(user_list), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500

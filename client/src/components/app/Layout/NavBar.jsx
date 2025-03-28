@@ -43,36 +43,25 @@ function NavBar() {
                 {/* Link to Books page */}
                 <NavLink to="/books" className={getNavLinkClass}>
                   <HomeIcon />
-                  {!isCollapsed && <span className="nav-text">Books</span>}
                 </NavLink>
               </li>
               <li>
                 {/* Link to Notes page */}
                 <NavLink to="/notes" className={getNavLinkClass}>
                   <DescriptionIcon />
-                  {!isCollapsed && <span className="nav-text">Notes</span>}
                 </NavLink>
               </li>
               <li>
                 {/* Link to Upload page */}
                 <NavLink to="/upload" className={getNavLinkClass}>
                   <UploadIcon />
-                  {!isCollapsed && <span className="nav-text">Upload</span>}
                 </NavLink>
               </li>
               <li>
                 {/* Link to Profile page */}
                 <NavLink to="/profile" className={getNavLinkClass}>
                   <AccountCircleIcon />
-                   {!isCollapsed && <span className="nav-text">Profile</span>}
                 </NavLink>
-              </li>
-              <li>
-                {/* Logout Button */}
-                <button onClick={handleLogout} className="nav-button">
-                  <LogoutIcon />
-                   {!isCollapsed && <span className="nav-text">Logout</span>}
-                </button>
               </li>
             </>
           ) : (
