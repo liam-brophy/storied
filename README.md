@@ -64,20 +64,6 @@ This web application provides a platform for users to manage and interact with t
 
 6.  **Start the development servers:**
 
-    *   **Frontend:**
-
-        ```bash
-        cd client
-        npm start
-        ```
-
-    *   **Backend:** (If applicable)
-
-        ```bash
-        cd ../server
-        npm start
-        ```
-
     *   The frontend will typically run on `http://localhost:5173` and the backend on `http://localhost:5555` (or other specified ports).
 
 ## Usage
