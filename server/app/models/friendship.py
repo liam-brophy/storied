@@ -58,14 +58,18 @@ class Friendship(db.Model, SerializerMixin):
         Returns:
             bool: Whether users are friends
         """
-        # Check for accepted friendship in either direction
-        friendship = cls.query.filter(
-            ((cls.user_id == user_id) & (cls.friend_id == target_id) | 
-             (cls.user_id == target_id) & (cls.friend_id == user_id)) & 
-            (cls.status == 'accepted')
-        ).first()
-        
-        return friendship is not None
+        try:
+            # Check for accepted friendship in either direction
+            friendship = cls.query.filter(
+                ((cls.user_id == user_id) & (cls.friend_id == target_id) | 
+                 (cls.user_id == target_id) & (cls.friend_id == user_id)) & 
+                (cls.status == 'accepted')
+            ).first()
+            return friendship is not None
+        except Exception as e:
+            # Log or handle the exception as needed
+            print(f"Error checking friendship: {e}")
+            return False
 
     @classmethod
     def get_friendship_status(cls, user_id, target_id):
@@ -79,9 +83,13 @@ class Friendship(db.Model, SerializerMixin):
         Returns:
             str: Friendship status ('pending', 'accepted', 'blocked', or None)
         """
-        friendship = cls.query.filter(
-            ((cls.user_id == user_id) & (cls.friend_id == target_id) | 
-             (cls.user_id == target_id) & (cls.friend_id == user_id))
-        ).first()
-        
-        return friendship.status if friendship else None
+        try:
+            friendship = cls.query.filter(
+                ((cls.user_id == user_id) & (cls.friend_id == target_id) | 
+                 (cls.user_id == target_id) & (cls.friend_id == user_id))
+            ).first()
+            return friendship.status if friendship else None
+        except Exception as e:
+            # Log or handle the exception as needed
+            print(f"Error retrieving friendship status: {e}")
+            return None
