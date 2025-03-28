@@ -7,6 +7,7 @@ from botocore.exceptions import ClientError
 import uuid
 from app.models import Book, FileMetadata, User
 from app import db
+from .auth import auth_required
 
 s3_client = boto3.client(
     's3',

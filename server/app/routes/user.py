@@ -127,7 +127,6 @@ def update_profile():
         data = request.json
 
         #let database check uniqueness of username and email
-
         
         if 'username' in data and data['username'] != user.username:
             #if username is already taken
@@ -140,7 +139,7 @@ def update_profile():
             if User.query.filter_by(email=data['email']).first():
                 return jsonify({'error': 'Email already registered'}), 400
             user.email = data['email']
-        set_trace()
+        # set_trace()
         #update password if provided
         if 'password' in data:
             #validate password complexity
