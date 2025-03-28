@@ -9,7 +9,7 @@ import apiClient from "../../services/api/axios"; // Adjust path as needed
 const NoteCard = ({ note, onDelete, onUpdate }) => {
   // State for managing edit mode and the edited comment text
   const [isEditing, setIsEditing] = useState(false);
-  const [editComment, setEditComment] = useState(note.comment || ''); // Initialize with current comment
+  const [editComment, setEditComment] = useState(note.content || ''); // Initialize with current comment
   const [error, setError] = useState(null); // Local error state for edit/delete actions
   const [isProcessing, setIsProcessing] = useState(false); // State for disabling buttons during API calls
 
@@ -17,7 +17,7 @@ const NoteCard = ({ note, onDelete, onUpdate }) => {
 
   // Enter Edit Mode
   const handleEnterEdit = () => {
-    setEditComment(note.comment || ''); // Reset edit field to current comment
+    setEditComment(note.content || ''); // Reset edit field to current comment
     setError(null); // Clear any previous errors
     setIsEditing(true);
   };
@@ -31,7 +31,7 @@ const NoteCard = ({ note, onDelete, onUpdate }) => {
 
   // Save Edited Note (API Call)
   const handleSaveEdit = async () => {
-    if (editComment === note.comment) {
+    if (editComment === note.content) {
         // No change, just exit edit mode
         setIsEditing(false);
         return;
@@ -40,7 +40,7 @@ const NoteCard = ({ note, onDelete, onUpdate }) => {
     setError(null);
     setIsProcessing(true);
     try {
-      const response = await apiClient.patch(`/notes/${note.id}`, { comment: editComment });
+      const response = await apiClient.patch(`/notes/${note.id}`, { content: editComment });
       // Call the onUpdate prop passed from NotesPage with the updated note data from API
       onUpdate(response.data);
       setIsEditing(false); // Exit edit mode on successful save
@@ -76,9 +76,9 @@ const NoteCard = ({ note, onDelete, onUpdate }) => {
 
   // --- Data for Display ---
   // Use optional chaining and fallbacks for safety
-  const bookTitle = note.book_title || "Unknown Book";
+  const bookTitle = note.book.title || "Unknown Book";
   // const bookAuthor = note.book_author || "Unknown Author"; // If available
-  const excerptText = note.excerpt || "";
+  const excerptText = note.content || "";
   const truncatedExcerpt = excerptText.length > 50 ? excerptText.slice(0, 50) + "..." : excerptText;
   const pageNum = note.page_number;
 
@@ -122,7 +122,7 @@ const NoteCard = ({ note, onDelete, onUpdate }) => {
           ) : (
              // --- View State ---
              <div className="note-comment">
-                <p>{note.comment || <i>No comment added.</i>}</p>
+                {/* <p>{note.comment || <i>No comment added.</i>}</p> */}
              </div>
           )}
         </div>

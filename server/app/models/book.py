@@ -3,6 +3,8 @@ from datetime import datetime
 from sqlalchemy.orm import validates
 from sqlalchemy_serializer import SerializerMixin
 
+
+
 class Book(db.Model, SerializerMixin):
     __tablename__ = 'books'
 
@@ -44,6 +46,7 @@ class Book(db.Model, SerializerMixin):
 
     @validates('uploaded_by_id')
     def validate_uploader(self, key, user_id):
+        from .user import User
         # ---> ADD THIS CHECK <---
         if user_id is None:
             return None  # Allow None to pass through the validator

@@ -108,7 +108,8 @@ def get_note(note_id):
         current_app.logger.error(f"Error fetching note: {str(e)}")
         return jsonify({'error': 'Failed to fetch note'}), 500
 
-@notes_bp.route('/<int:note_id>', methods=['PUT'])
+@notes_bp.route('/<int:note_id>', methods=['PATCH'])
+@auth_required
 def update_note(note_id):
     """Update a specific note"""
     try:
@@ -140,6 +141,7 @@ def update_note(note_id):
         return jsonify({'error': 'Failed to update note'}), 500
 
 @notes_bp.route('/<int:note_id>', methods=['DELETE'])
+@auth_required
 def delete_note(note_id):
     """Delete a specific note"""
     try:

@@ -8,6 +8,7 @@ import uuid
 from app.models import Book, FileMetadata, User
 from app import db
 from .auth import auth_required
+from ipdb import set_trace
 
 s3_client = boto3.client(
     's3',
@@ -53,6 +54,7 @@ def get_book(book_id):
         return jsonify({'error': 'Failed to fetch book'}), 500
 
 @books_bp.route('', methods=['POST'])
+@auth_required
 def create_book():
     try:
         title = request.form.get('title')

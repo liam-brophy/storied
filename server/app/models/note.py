@@ -7,7 +7,7 @@ class Note(db.Model, SerializerMixin):
     __tablename__ = 'notes'
 
     # Enable serialization for specific fields
-    serialize_only = ('id', 'content', 'page_number', 'book_id', 'user_id', 'created_at')
+    serialize_only = ('id', 'content', 'page_number', 'book_id', 'user_id', 'created_at', 'book.title')
 
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)

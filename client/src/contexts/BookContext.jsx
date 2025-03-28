@@ -49,13 +49,22 @@ export const BooksProvider = ({ children }) => {
     // Re-run this effect whenever 'isAuthenticated' changes
   }, [isAuthenticated]);
 
+  const addBook = (newBook) => {
+    // Function to add a new book to the state
+    setBooks((prevBooks) => [...prevBooks, newBook]);
+  };
+
   // Value provided by the context
   const contextValue = {
     books,
     isLoading,
     error,
+    addBook,
     fetchBooks // Expose fetchBooks in case a component needs to trigger a manual refresh
   };
+
+
+
 
   return (
     <BooksContext.Provider value={contextValue}>
