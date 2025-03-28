@@ -5,15 +5,9 @@ import os
 import boto3
 from botocore.exceptions import ClientError
 import uuid
-from ipdb import set_trace
-import logging
-from .auth import auth_required
-
 from app.models import Book, FileMetadata, User
-# from app.routes.auth import auth_required
 from app import db
 
-# S3 Configuration
 s3_client = boto3.client(
     's3',
     aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
@@ -26,157 +20,85 @@ books_bp = Blueprint('books', __name__, url_prefix='/api/books')
 
 
 def validate_book_access(book, user_id):
-    """
-    Check if user has access to the book
-    
-    :param book: Book object
-    :param user_id: ID of the current user
-    :return: Boolean indicating access
-    """
     return book.is_public or book.uploaded_by_id == user_id
 
 def generate_s3_file_key(book_id, filename):
-    """
-    Generate a unique S3 file key
-    
-    :param book_id: ID of the book
-    :param filename: Original filename
-    :return: Unique S3 file key
-    """
     safe_filename = secure_filename(filename)
     unique_id = uuid.uuid4().hex
     file_ext = os.path.splitext(safe_filename)[1]
     return f"books/{book_id}/{unique_id}{file_ext}"
 
 @books_bp.route('', methods=['GET'])
-# @auth_required
 def get_books():
-    """Get all books that the user has access to"""
     try:
-        # user_id = g.user.id
-
-        # Get books that are either public or uploaded by the user
         books = Book.query.filter(
-            (Book.is_public == True) #| (Book.uploaded_by_id == user_id)
+            (Book.is_public == True)
         ).all()
-        
-        # Serialize book data using SerializerMixin
         result = [book.to_dict() for book in books]
-        
         return jsonify(result), 200
-    
     except Exception as e:
-        # current_app.logger.error(f"Error fetching books: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @books_bp.route('/<int:book_id>', methods=['GET'])
-# @auth_required
 def get_book(book_id):
-    """Get a specific book with access control"""
     try:
         book = Book.query.get_or_404(book_id)
-        
-        # Validate user access
         if not validate_book_access(book, g.user.id):
             return jsonify({'error': 'You do not have access to this book'}), 403
-        
-        # Serialize book data using SerializerMixin
         book_data = book.to_dict()
-        
         return jsonify(book_data), 200
-    
     except Exception as e:
         current_app.logger.error(f"Error fetching book: {str(e)}")
         return jsonify({'error': 'Failed to fetch book'}), 500
 
 @books_bp.route('', methods=['POST'])
-# @auth_required
 def create_book():
-    """Create a new book entry with file upload"""
     try:
-        # Use request.form directly
         title = request.form.get('title')
         author = request.form.get('author')
         genre = request.form.get('genre', 'Unknown')
-        is_public = request.form.get('is_public', 'true').lower() == 'true' # Handle potential string 'false'
+        is_public = request.form.get('is_public', 'true').lower() == 'true'
 
-        # Validate required fields using the fetched variables
-        # Use request.form to check existence robustly
         if not title or not author:
-             # Or: if not all(field in request.form for field in ['title', 'author']):
             return jsonify({'error': 'Missing required fields: title and author'}), 400
 
-        # Handle file upload
         file = request.files.get('file')
-        if not file or not file.filename: # Also check if filename is not empty
+        if not file or not file.filename:
             return jsonify({'error': 'File with a filename is required'}), 400
 
-        # Secure the filename
         filename = secure_filename(file.filename)
-
-        # --- S3 Upload Section ---
-        file_key = f"books/{filename}" # Consider adding user ID or UUID for uniqueness
+        file_key = f"books/{filename}"
         file_url = None
         file_size = None
         file_type = None
 
         try:
-            # Option 1: Get size before upload (can be memory intensive)
-            # file.seek(0, os.SEEK_END) # Seek to end to get size
-            # file_size = file.tell()    # Get size
-            # file.seek(0)               # Reset file pointer for S3 upload
-
-            # Option 2: Read into memory (original way, memory intensive)
-            # Be cautious with large files
             file_content = file.read()
             file_size = len(file_content)
-            file.seek(0) # Reset file pointer if read() consumed it (depends on underlying stream type, but good practice)
-
-            # Upload to S3 bucket
-            # If using file_content: use upload_fileobj(io.BytesIO(file_content), ...)
-            # If using original file object after seek(0): use upload_fileobj(file, ...)
+            file.seek(0)
             s3_client.upload_fileobj(
-                file, # Or io.BytesIO(file_content) if using Option 2 rigorously
+                file,
                 S3_BUCKET,
                 file_key,
-                ExtraArgs={ # Optional: Explicitly set ContentType for S3 object
-                    'ContentType': file.content_type
-                }
+                ExtraArgs={'ContentType': file.content_type}
             )
-
-            # File URL after upload
-            # Ensure your bucket policy allows public reads if this URL is for direct access
             file_url = f"https://{S3_BUCKET}.s3.amazonaws.com/{file_key}"
             file_type = file.content_type.replace('application/', '')
-
         except Exception as e:
-            # Use current_app.logger for Flask context
-            current_app.logger.error(f"Error uploading file to S3: {str(e)}", exc_info=True) # Log traceback
+            current_app.logger.error(f"Error uploading file to S3: {str(e)}", exc_info=True)
             return jsonify({'error': 'Failed to upload file to S3'}), 500
-        # --- End S3 Upload Section ---
 
-        # Get user ID safely
-        uploader_id = None
-        if hasattr(g, 'user') and g.user:
-             uploader_id = g.user.id
-        # else:
-             # Decide what to do if no user is found (e.g., raise error, allow None)
-             # If auth is required, the decorator should handle this before the function runs.
-             # If auth is optional, allowing None might be okay if DB column is nullable.
-             # pass # uploader_id remains None
+        uploader_id = g.user.id if hasattr(g, 'user') and g.user else None
 
-
-        # Create new book using variables defined earlier
         new_book = Book(
             title=title,
             author=author,
             genre=genre,
             is_public=is_public,
-            uploaded_by_id=uploader_id, # Use the safe variable
+            uploaded_by_id=uploader_id,
             s3_url=file_url,
             file_size=file_size,
             file_type=file_type
-            # Consider adding filename=filename to the model too
         )
 
         db.session.add(new_book)
@@ -192,63 +114,42 @@ def create_book():
         db.session.add(new_book_data)
         db.session.commit()
 
-        # Serialize and return the new book data
-        # Ensure Book model has a functioning to_dict method
         return jsonify(new_book.to_dict()), 201
-
     except Exception as e:
         db.session.rollback()
-        # Use current_app.logger and include traceback
         current_app.logger.error(f"Error creating book: {str(e)}", exc_info=True)
-        # Avoid exposing internal error details in production responses
         return jsonify({'error': str(e)}), 500
-
-
-
 
 @books_bp.route('/<int:book_id>', methods=['DELETE'])
 @auth_required
 def delete_book(book_id):
-    """Delete a specific book owned by the current user"""
     try:
         book = Book.query.get_or_404(book_id)
-
-        # Verify ownership using the correct column name
-        if book.uploaded_by_id != g.user.id: # <--- CORRECTED
+        if book.uploaded_by_id != g.user.id:
             current_app.logger.warning(f"User {g.user.id} attempted to delete book {book_id} owned by user {book.uploaded_by_id}")
             return jsonify({'error': 'Forbidden: You do not own this book'}), 403
 
         s3_url_to_delete = book.s3_url
-        s3_key_to_delete = None # You need logic to extract the key from the URL
-        bucket_name = current_app.config.get('S3_BUCKET') # Get bucket name from config
+        s3_key_to_delete = None
+        bucket_name = current_app.config.get('S3_BUCKET')
 
         if s3_url_to_delete:
-            # EXAMPLE: Simple parsing (adjust based on your URL format)
-            # Assumes URL like https://<bucket>.s3.<region>.amazonaws.com/<key>
-            # Or https://s3.<region>.amazonaws.com/<bucket>/<key>
             try:
-                # This parsing is basic and might need adjustment
                 if f"/{bucket_name}/" in s3_url_to_delete:
-                     s3_key_to_delete = s3_url_to_delete.split(f"/{bucket_name}/", 1)[1]
-                elif f"//{bucket_name}." in s3_url_to_delete: # subdomain style
-                     s3_key_to_delete = s3_url_to_delete.split(f"{bucket_name}.s3.{current_app.config.get('S3_REGION')}.amazonaws.com/", 1)[1] # Adjust region if needed
-
+                    s3_key_to_delete = s3_url_to_delete.split(f"/{bucket_name}/", 1)[1]
+                elif f"//{bucket_name}." in s3_url_to_delete:
+                    s3_key_to_delete = s3_url_to_delete.split(f"{bucket_name}.s3.{current_app.config.get('S3_REGION')}.amazonaws.com/", 1)[1]
                 if not s3_key_to_delete:
-                     current_app.logger.error(f"Could not extract S3 key from URL: {s3_url_to_delete}")
-
+                    current_app.logger.error(f"Could not extract S3 key from URL: {s3_url_to_delete}")
             except Exception as parse_error:
                 current_app.logger.error(f"Error parsing S3 URL {s3_url_to_delete}: {parse_error}")
-                s3_key_to_delete = None # Ensure deletion doesn't proceed with bad key
+                s3_key_to_delete = None
 
-
-        # 4. Delete the book record from the database
         db.session.delete(book)
-        db.session.commit() # Commit deletion
+        db.session.commit()
 
-        # 5. Delete the associated file from S3 AFTER successful DB commit
         if s3_key_to_delete and bucket_name:
             try:
-                import boto3
                 s3 = boto3.client(
                     's3',
                     aws_access_key_id=current_app.config.get('S3_KEY'),
@@ -256,53 +157,40 @@ def delete_book(book_id):
                 )
                 s3.delete_object(Bucket=bucket_name, Key=s3_key_to_delete)
                 current_app.logger.info(f"Successfully deleted S3 object: s3://{bucket_name}/{s3_key_to_delete}")
-            except Exception as s3_e: # Catch specific boto3 errors if possible
-                # Log error if S3 deletion fails, but proceed as DB record is gone
+            except Exception as s3_e:
                 current_app.logger.error(f"Error deleting S3 object s3://{bucket_name}/{s3_key_to_delete} after deleting DB record for book {book_id}: {str(s3_e)}")
         elif not bucket_name:
-             current_app.logger.error(f"S3_BUCKET config missing, cannot delete S3 object for book {book_id}")
-
+            current_app.logger.error(f"S3_BUCKET config missing, cannot delete S3 object for book {book_id}")
 
         current_app.logger.info(f"User {g.user.id} successfully deleted book {book_id}")
         return '', 204
-
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error deleting book {book_id} for user {g.user.id}: {str(e)}")
         return jsonify({'error': 'Failed to delete book', 'details': str(e)}), 500
 
-
 @books_bp.route('/<int:book_id>/upload', methods=['POST'])
-# @auth_required
 def upload_book_file(book_id):
-    """Upload a file for a specific book and store S3 URL"""
     try:
         book = Book.query.get_or_404(book_id)
-
-        # Check ownership
         if book.uploaded_by_id != g.user.id:
             return jsonify({'error': 'Unauthorized to upload for this book'}), 403
 
-        # Validate file upload
         if 'file' not in request.files:
             return jsonify({'error': 'No file provided'}), 400
 
         file = request.files['file']
-
         if file.filename == '':
             return jsonify({'error': 'No selected file'}), 400
 
-        # Validate file extension
         valid_extensions = {'txt', 'pdf', 'epub', 'mobi', 'docx'}
         file_ext = file.filename.rsplit('.', 1)[-1].lower()
 
         if file_ext not in valid_extensions:
             return jsonify({'error': f'Invalid file type. Allowed: {", ".join(valid_extensions)}'}), 400
 
-        # Generate unique S3 key
         s3_key = generate_s3_file_key(book_id, file.filename)
 
-        # Upload to S3
         try:
             s3_client.upload_fileobj(
                 file,
@@ -317,21 +205,17 @@ def upload_book_file(book_id):
             current_app.logger.error(f"S3 Upload Error: {str(s3_error)}")
             return jsonify({'error': 'Failed to upload file to S3'}), 500
 
-        # Calculate file size with fallback
         file.seek(0, os.SEEK_END)
         file_size = file.tell()
         file.seek(0)
 
-        # Create or update FileMetadata
         file_metadata = book.file_metadata or FileMetadata(book_id=book.id)
         file_metadata.file_name = secure_filename(file.filename)
         file_metadata.file_type = file_ext
         file_metadata.size = file_size
 
-        # Store S3 URL in the Book model
         book.s3_url = f"https://{S3_BUCKET}.s3.amazonaws.com/{s3_key}"
 
-        # Save changes
         db.session.add(file_metadata)
         db.session.commit()
 
@@ -342,34 +226,25 @@ def upload_book_file(book_id):
             'file_type': file_metadata.file_type,
             'size': file_metadata.size
         }), 201
-
     except ClientError as s3_error:
         db.session.rollback()
         current_app.logger.error(f"S3 Upload Error: {str(s3_error)}")
         return jsonify({'error': 'Failed to upload file to S3'}), 500
-
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"File upload error: {str(e)}")
         return jsonify({'error': 'Failed to process file upload'}), 500
 
-
 @books_bp.route('/<int:book_id>/download', methods=['GET'])
-# @auth_required
 def generate_download_url(book_id):
-    """Generate a temporary download URL for a book file"""
     try:
         book = Book.query.get_or_404(book_id)
-
-        # Validate access
         if not validate_book_access(book, g.user.id):
             return jsonify({'error': 'Unauthorized to download this book'}), 403
 
-        # Check if file exists
         if not book.file_metadata or not book.s3_url:
             return jsonify({'error': 'No file available for download'}), 404
 
-        # Extract S3 key from URL
         s3_key = book.s3_url.split('.com/')[-1]
 
         try:
@@ -380,9 +255,8 @@ def generate_download_url(book_id):
                     'Key': s3_key,
                     'ResponseContentDisposition': f'attachment; filename="{book.file_metadata.file_name}"'
                 },
-                ExpiresIn=3600  # 1 hour
+                ExpiresIn=3600
             )
-
         except ClientError as e:
             if e.response['Error']['Code'] == 'NoSuchKey':
                 return jsonify({'error': 'File not found on S3'}), 404
@@ -393,11 +267,9 @@ def generate_download_url(book_id):
             'file_name': book.file_metadata.file_name,
             'expires_in': '1 hour'
         }), 200
-
     except ClientError as s3_error:
         current_app.logger.error(f"Download URL error: {str(s3_error)}")
         return jsonify({'error': 'Failed to generate download link'}), 500
-
     except Exception as e:
         current_app.logger.error(f"Download error: {str(e)}")
         return jsonify({'error': 'Failed to generate download link'}), 500
